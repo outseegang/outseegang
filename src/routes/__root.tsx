@@ -78,10 +78,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Outsee — Streetwear de marca própria" },
       { name: "description", content: "Moletons e tênis Outsee. Catálogo completo de streetwear urbano." },
       { name: "author", content: "Outsee" },
-      { property: "og:title", content: "Outsee — Streetwear" },
-      { property: "og:description", content: "Catálogo de moletons e tênis Outsee." },
+      { property: "og:title", content: "Outsee — Streetwear de marca própria" },
+      { property: "og:description", content: "Moletons e tênis Outsee. Catálogo completo de streetwear urbano." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "Outsee — Streetwear de marca própria" },
+      { name: "twitter:description", content: "Moletons e tênis Outsee. Catálogo completo de streetwear urbano." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/617dc557-e380-41b1-821d-06cb955240a9" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/617dc557-e380-41b1-821d-06cb955240a9" },
     ],
     links: [
       {
