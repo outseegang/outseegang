@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { redeemAdminCode } from "@/lib/admin.functions";
-import { Shield, User as UserIcon } from "lucide-react";
+import { Shield, User as UserIcon, Package } from "lucide-react";
 
 export const Route = createFileRoute("/perfil")({ component: Perfil });
 
@@ -139,6 +139,11 @@ function ProfileView({ isAdmin, setIsAdmin, signOut, email }: {
             Abrir painel Admin
           </button>
         )}
+
+        <button onClick={() => nav({ to: "/pedidos" })}
+          className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-border font-bold py-3 hover:bg-secondary transition">
+          <Package className="h-4 w-4" /> Meus pedidos
+        </button>
 
         <button onClick={signOut} className="mt-3 w-full rounded-lg border border-border font-bold py-3 hover:bg-secondary transition">
           Sair
