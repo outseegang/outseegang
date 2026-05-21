@@ -21,5 +21,7 @@ export const productImages: Record<string, string> = {
 };
 
 export function getProductImage(slug: string): string {
+  if (!slug) return branco;
+  if (slug.startsWith("http://") || slug.startsWith("https://")) return slug;
   return productImages[slug] ?? branco;
 }

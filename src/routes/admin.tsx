@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProductImage, productImages } from "@/lib/product-images";
@@ -156,9 +156,7 @@ function ProductModal({ product, onClose, onSaved }: {
           </div>
           <Field label="Tamanhos (separados por vírgula)"><input value={form.sizes} onChange={(e) => setForm({ ...form, sizes: e.target.value })} className={inputCls} /></Field>
           <Field label="Imagem">
-            <select value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} className={inputCls}>
-              {Object.keys(productImages).map((k) => <option key={k} value={k}>{k}</option>)}
-            </select>
+            <ImageField value={form.image_url} onChange={(url) => setForm({ ...form, image_url: url })} />
           </Field>
           <Field label="Descrição"><textarea rows={3} value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inputCls} /></Field>
           <button disabled={loading} className="w-full rounded-lg bg-accent text-accent-foreground font-bold py-3 hover:opacity-90 transition disabled:opacity-50">
@@ -173,4 +171,43 @@ function ProductModal({ product, onClose, onSaved }: {
 const inputCls = "w-full rounded-lg bg-secondary px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent";
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block"><span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">{label}</span><div className="mt-1">{children}</div></label>;
+}
+
+function ImageField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+      onChange(data.publicUrl);
+      toast.success("Imagem enviada!");
+    } catch (err: any) {
+      toast.error(err.message ?? "Falha ao enviar");
+    } finally { setUploading(false); }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3">
+        <img src={getProductImage(value)} alt="" className="w-16 h-16 rounded object-cover bg-secondary" />
+        <label className="inline-flex items-center gap-2 cursor-pointer rounded-lg bg-secondary px-3 py-2 hover:bg-muted transition text-sm font-semibold">
+          <Upload className="h-4 w-4" />
+          {uploading ? "Enviando…" : "Enviar imagem"}
+          <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={uploading} />
+        </label>
+      </div>
+      <select value={productImages[value] ? value : ""} onChange={(e) => e.target.value && onChange(e.target.value)} className={inputCls}>
+        <option value="">— ou escolher imagem padrão —</option>
+        {Object.keys(productImages).map((k) => <option key={k} value={k}>{k}</option>)}
+      </select>
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="URL ou slug" className={`${inputCls} text-xs`} />
+    </div>
+  );
 }
