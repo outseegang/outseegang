@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      order_items: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          image_url: string
+          name: string
+          order_id: string
+          product_id: string | null
+          quantity: number
+          size: string
+          unit_price: number
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          id?: string
+          image_url?: string
+          name: string
+          order_id: string
+          product_id?: string | null
+          quantity?: number
+          size: string
+          unit_price?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          image_url?: string
+          name?: string
+          order_id?: string
+          product_id?: string | null
+          quantity?: number
+          size?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          id: string
+          payment_method: string
+          shipping_address: Json
+          status: string
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payment_method?: string
+          shipping_address?: Json
+          status?: string
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payment_method?: string
+          shipping_address?: Json
+          status?: string
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string
