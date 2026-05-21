@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "@tanstack/react-router";
 import { getProductImage } from "@/lib/product-images";
 
 export interface Product {
@@ -23,6 +24,7 @@ export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
       whileHover={{ y: -6 }}
       className="group rounded-2xl bg-card border border-border overflow-hidden shadow-[var(--shadow-glow)]"
     >
+      <Link to="/produto/$id" params={{ id: p.id }} className="block">
       <div className="aspect-square overflow-hidden bg-muted">
         <img src={getProductImage(p.image_url)} alt={`${p.name} ${p.color}`}
           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -47,6 +49,7 @@ export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
           ))}
         </div>
       </div>
+      </Link>
     </motion.div>
   );
 }
