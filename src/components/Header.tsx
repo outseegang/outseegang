@@ -1,12 +1,14 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Search, User as UserIcon, Shield, LogOut } from "lucide-react";
+import { Search, User as UserIcon, Shield, LogOut, ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import logo from "@/assets/logo.png";
 
 export function Header() {
   const { user, isAdmin, signOut } = useAuth();
+  const { count } = useCart();
   const nav = useNavigate();
   const [q, setQ] = useState("");
 
@@ -40,6 +42,12 @@ export function Header() {
           </div>
         </form>
         <div className="flex items-center gap-2">
+          <Link to="/carrinho" className="relative rounded-full bg-secondary p-2 hover:bg-muted transition-colors" title="Carrinho">
+            <ShoppingBag className="h-5 w-5" />
+            {count > 0 && (
+              <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">{count}</span>
+            )}
+          </Link>
           {user ? (
             <>
               <Link to="/perfil" className="rounded-full bg-secondary p-2 hover:bg-muted transition-colors" title="Perfil">
