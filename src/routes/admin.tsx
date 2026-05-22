@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, X, Upload } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Upload, Package, Boxes } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProductImage, productImages } from "@/lib/product-images";
@@ -18,6 +18,37 @@ function Admin() {
     if (!loading && (!user || !isAdmin)) nav({ to: "/perfil" });
   }, [loading, user, isAdmin, nav]);
 
+  const [tab, setTab] = useState<"products" | "orders">("products");
+
+  if (!isAdmin) return null;
+
+  return (
+    <main className="mx-auto max-w-7xl px-4 py-10 min-h-screen">
+      <div>
+        <h1 className="text-4xl font-black">Painel Admin</h1>
+        <p className="text-muted-foreground">Gerencie todo o catálogo e pedidos da Outsee.</p>
+      </div>
+
+      <div className="mt-6 flex gap-2 border-b border-border">
+        {([
+          { id: "products", label: "Produtos", icon: Boxes },
+          { id: "orders", label: "Pedidos", icon: Package },
+        ] as const).map((t) => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`flex items-center gap-2 px-5 py-3 font-bold text-sm border-b-2 transition ${
+              tab === t.id ? "border-accent text-accent" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}>
+            <t.icon className="h-4 w-4" /> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "products" ? <ProductsPanel /> : <OrdersPanel />}
+    </main>
+  );
+}
+
+function ProductsPanel() {
   const qc = useQueryClient();
   const { data: products = [] } = useQuery({
     queryKey: ["products", "all"],
@@ -26,7 +57,6 @@ function Admin() {
       if (error) throw error;
       return data as Product[];
     },
-    enabled: isAdmin,
   });
 
   const [editing, setEditing] = useState<Product | null>(null);
@@ -40,22 +70,16 @@ function Admin() {
     if (error) toast.error(error.message); else { toast.success("Excluído"); refresh(); }
   };
 
-  if (!isAdmin) return null;
-
   return (
-    <main className="mx-auto max-w-7xl px-4 py-10 min-h-screen">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-black">Painel Admin</h1>
-          <p className="text-muted-foreground">Gerencie todo o catálogo Outsee.</p>
-        </div>
+    <div className="mt-6">
+      <div className="flex items-center justify-end">
         <button onClick={() => setCreating(true)}
           className="inline-flex items-center gap-2 rounded-full bg-accent text-accent-foreground font-bold px-5 py-3 hover:scale-105 transition">
           <Plus className="h-4 w-4" /> Novo produto
         </button>
       </div>
 
-      <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-secondary">
             <tr className="text-left">
@@ -98,7 +122,110 @@ function Admin() {
           />
         )}
       </AnimatePresence>
-    </main>
+    </div>
+  );
+}
+
+const ORDER_STATUSES = [
+  { value: "pending", label: "Aguardando pagamento" },
+  { value: "paid", label: "Pagamento concluído" },
+  { value: "shipped", label: "Pedido enviado" },
+  { value: "delivered", label: "Entregue" },
+  { value: "cancelled", label: "Cancelado" },
+] as const;
+
+function OrdersPanel() {
+  const qc = useQueryClient();
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ["admin", "orders"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*, order_items(*)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const updateOrder = async (id: string, patch: { status?: string; delivery_days?: number | null }) => {
+    const { error } = await supabase.from("orders").update(patch as any).eq("id", id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Pedido atualizado");
+      qc.invalidateQueries({ queryKey: ["admin", "orders"] });
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+    }
+  };
+
+  if (isLoading) return <p className="text-center py-20 text-muted-foreground">Carregando…</p>;
+  if (orders.length === 0) return <p className="text-center py-20 text-muted-foreground">Nenhum pedido até o momento.</p>;
+
+  return (
+    <div className="mt-6 space-y-4">
+      {orders.map((o) => {
+        const addr = o.shipping_address ?? {};
+        const installments = addr.installments ?? 1;
+        return (
+          <motion.div key={o.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-card border border-border rounded-2xl p-5">
+            <div className="flex justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Pedido #{o.order_number ?? o.id.slice(0, 8)}</p>
+                <p className="font-black text-lg">{addr.name ?? "Cliente"}</p>
+                <p className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString("pt-BR")}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-black text-xl text-accent">R$ {Number(o.total).toFixed(2).replace(".", ",")}</p>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {o.payment_method === "cartao" ? "Cartão" : o.payment_method}
+                  {installments > 1 ? ` • ${installments}x` : " • à vista"}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3 mt-4 text-sm">
+              <div className="bg-secondary rounded-lg p-3">
+                <p className="text-xs uppercase font-bold text-muted-foreground mb-1">Contato</p>
+                <p>{addr.phone ?? "—"}</p>
+              </div>
+              <div className="bg-secondary rounded-lg p-3">
+                <p className="text-xs uppercase font-bold text-muted-foreground mb-1">Endereço</p>
+                <p>{addr.street}, {addr.number}</p>
+                <p>{addr.city} - {addr.state} • CEP {addr.cep}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-1 text-sm">
+              {o.order_items?.map((it: any) => (
+                <div key={it.id} className="flex justify-between items-center bg-secondary/40 rounded px-3 py-2">
+                  <span>{it.quantity}× {it.name} — {it.color} / {it.size}</span>
+                  <span className="font-bold">R$ {(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 grid sm:grid-cols-2 gap-3 pt-4 border-t border-border">
+              <label className="block">
+                <span className="text-xs font-bold uppercase text-muted-foreground">Status</span>
+                <select value={o.status} onChange={(e) => updateOrder(o.id, { status: e.target.value })} className={inputCls + " mt-1"}>
+                  {ORDER_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs font-bold uppercase text-muted-foreground">Prazo de entrega (dias)</span>
+                <input type="number" min={0} defaultValue={o.delivery_days ?? ""} placeholder="Ex: 7"
+                  onBlur={(e) => {
+                    const v = e.target.value === "" ? null : Number(e.target.value);
+                    if (v !== o.delivery_days) updateOrder(o.id, { delivery_days: v });
+                  }}
+                  className={inputCls + " mt-1"} />
+              </label>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
   );
 }
 
