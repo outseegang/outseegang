@@ -65,6 +65,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          order_number: number
           payment_method: string
           shipping_address: Json
           status: string
@@ -75,6 +76,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          order_number?: number
           payment_method?: string
           shipping_address?: Json
           status?: string
@@ -85,6 +87,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          order_number?: number
           payment_method?: string
           shipping_address?: Json
           status?: string
