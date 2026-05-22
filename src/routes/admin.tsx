@@ -148,8 +148,8 @@ function OrdersPanel() {
     },
   });
 
-  const updateOrder = async (id: string, patch: Record<string, any>) => {
-    const { error } = await supabase.from("orders").update(patch).eq("id", id);
+  const updateOrder = async (id: string, patch: { status?: string; delivery_days?: number | null }) => {
+    const { error } = await supabase.from("orders").update(patch as any).eq("id", id);
     if (error) toast.error(error.message);
     else {
       toast.success("Pedido atualizado");
