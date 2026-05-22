@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Package } from "lucide-react";
+import { Package, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProductImage } from "@/lib/product-images";
@@ -9,9 +9,9 @@ import { getProductImage } from "@/lib/product-images";
 export const Route = createFileRoute("/pedidos")({ component: Orders });
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  pending: { label: "Pendente", color: "bg-yellow-500/20 text-yellow-300" },
-  paid: { label: "Pago", color: "bg-blue-500/20 text-blue-300" },
-  shipped: { label: "Enviado", color: "bg-purple-500/20 text-purple-300" },
+  pending: { label: "Aguardando pagamento", color: "bg-yellow-500/20 text-yellow-300" },
+  paid: { label: "Pagamento concluído", color: "bg-blue-500/20 text-blue-300" },
+  shipped: { label: "Pedido enviado", color: "bg-purple-500/20 text-purple-300" },
   delivered: { label: "Entregue", color: "bg-green-500/20 text-green-300" },
   cancelled: { label: "Cancelado", color: "bg-red-500/20 text-red-300" },
 };
@@ -63,11 +63,19 @@ function Orders() {
                 className="bg-card border border-border rounded-2xl p-5">
                 <div className="flex justify-between items-start flex-wrap gap-2">
                   <div>
-                    <p className="text-xs text-muted-foreground">Pedido #{o.id.slice(0, 8)}</p>
+                    <p className="text-xs text-muted-foreground">Pedido nº{o.order_number ?? o.id.slice(0, 8)}</p>
                     <p className="text-sm">{new Date(o.created_at).toLocaleString("pt-BR")}</p>
                   </div>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full ${st.color}`}>{st.label}</span>
                 </div>
+                {o.delivery_days != null && (o.status === "shipped" || o.status === "paid") && (
+                  <div className="mt-3 flex items-center gap-2 text-sm bg-accent/10 text-accent rounded-lg px-3 py-2">
+                    <Truck className="h-4 w-4" />
+                    <span className="font-bold">
+                      {o.status === "shipped" ? "Chega em" : "Previsão de entrega:"} aproximadamente {o.delivery_days} {o.delivery_days === 1 ? "dia" : "dias"}
+                    </span>
+                  </div>
+                )}
                 <div className="mt-4 space-y-2">
                   {o.order_items?.map((it: any) => (
                     <div key={it.id} className="flex gap-3 items-center text-sm">
