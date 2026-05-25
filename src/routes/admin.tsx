@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, X, Upload, Package, Boxes } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Upload, Package, Boxes, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProductImage, productImages } from "@/lib/product-images";
@@ -221,6 +221,18 @@ function OrdersPanel() {
     }
   };
 
+  const deleteOrder = async (order: any) => {
+    if (!confirm(`Excluir pedido #${order.order_number ?? order.id.slice(0,8)}? Esta ação não pode ser desfeita.`)) return;
+    const { error: e1 } = await supabase.from("order_items").delete().eq("order_id", order.id);
+    if (e1) { toast.error(e1.message); return; }
+    const { error: e2 } = await supabase.from("orders").delete().eq("id", order.id);
+    if (e2) { toast.error(e2.message); return; }
+    toast.success("Pedido excluído");
+    qc.invalidateQueries({ queryKey: ["admin", "orders"] });
+  };
+
+  const [editing, setEditing] = useState<any | null>(null);
+
   if (isLoading) return <p className="text-center py-20 text-muted-foreground">Carregando…</p>;
   if (orders.length === 0) return <p className="text-center py-20 text-muted-foreground">Nenhum pedido até o momento.</p>;
 
@@ -244,6 +256,12 @@ function OrdersPanel() {
                   {o.payment_method === "cartao" ? "Cartão" : o.payment_method}
                   {installments > 1 ? ` • ${installments}x` : " • à vista"}
                 </p>
+                <div className="flex gap-1 justify-end mt-2">
+                  <button onClick={() => setEditing(o)} title="Editar"
+                    className="p-2 rounded hover:bg-accent hover:text-accent-foreground transition"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => deleteOrder(o)} title="Excluir"
+                    className="p-2 rounded hover:bg-destructive hover:text-destructive-foreground transition"><Trash2 className="h-4 w-4" /></button>
+                </div>
               </div>
             </div>
 
@@ -291,7 +309,92 @@ function OrdersPanel() {
           </motion.div>
         );
       })}
+      <AnimatePresence>
+        {editing && (
+          <OrderEditModal
+            order={editing}
+            onClose={() => setEditing(null)}
+            onSaved={() => { setEditing(null); qc.invalidateQueries({ queryKey: ["admin", "orders"] }); }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function OrderEditModal({ order, onClose, onSaved }: { order: any; onClose: () => void; onSaved: () => void }) {
+  const addr = order.shipping_address ?? {};
+  const [form, setForm] = useState({
+    name: addr.name ?? "",
+    phone: addr.phone ?? "",
+    cep: addr.cep ?? "",
+    street: addr.street ?? "",
+    number: addr.number ?? "",
+    city: addr.city ?? "",
+    state: addr.state ?? "",
+    installments: addr.installments ?? 1,
+    payment_method: order.payment_method ?? "pix",
+    total: Number(order.total ?? 0),
+  });
+  const [saving, setSaving] = useState(false);
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    const { error } = await supabase.from("orders").update({
+      payment_method: form.payment_method,
+      total: Number(form.total),
+      shipping_address: {
+        ...addr,
+        name: form.name, phone: form.phone, cep: form.cep,
+        street: form.street, number: form.number, city: form.city, state: form.state,
+        installments: Number(form.installments),
+      },
+    }).eq("id", order.id);
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else { toast.success("Pedido atualizado"); onSaved(); }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 30 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-card border border-border rounded-3xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-black">Editar pedido #{order.order_number ?? order.id.slice(0,8)}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-secondary rounded-full"><X className="h-4 w-4" /></button>
+        </div>
+        <form onSubmit={save} className="space-y-3 text-sm">
+          <Field label="Nome"><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} /></Field>
+          <Field label="Telefone"><input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="CEP"><input value={form.cep} onChange={(e) => setForm({ ...form, cep: e.target.value })} className={inputCls} /></Field>
+            <Field label="Cidade"><input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className={inputCls} /></Field>
+          </div>
+          <Field label="Rua"><input value={form.street} onChange={(e) => setForm({ ...form, street: e.target.value })} className={inputCls} /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Número"><input value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className={inputCls} /></Field>
+            <Field label="UF"><input maxLength={2} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })} className={inputCls} /></Field>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Pagamento">
+              <select value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} className={inputCls}>
+                <option value="pix">PIX</option>
+                <option value="cartao">Cartão</option>
+                <option value="boleto">Boleto</option>
+              </select>
+            </Field>
+            <Field label="Parcelas"><input type="number" min={1} value={form.installments} onChange={(e) => setForm({ ...form, installments: Number(e.target.value) })} className={inputCls} /></Field>
+            <Field label="Total (R$)"><input type="number" step="0.01" value={form.total} onChange={(e) => setForm({ ...form, total: Number(e.target.value) })} className={inputCls} /></Field>
+          </div>
+          <button disabled={saving} className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-accent text-accent-foreground font-bold py-3 hover:opacity-90 transition disabled:opacity-50">
+            <Save className="h-4 w-4" /> {saving ? "Salvando…" : "Salvar alterações"}
+          </button>
+        </form>
+      </motion.div>
+    </motion.div>
   );
 }
 

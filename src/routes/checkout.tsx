@@ -32,6 +32,27 @@ function Checkout() {
 
   useEffect(() => { if (items.length === 0) nav({ to: "/carrinho" }); }, [items, nav]);
 
+  const [cepLoading, setCepLoading] = useState(false);
+  const lookupCep = async (raw: string) => {
+    const cep = raw.replace(/\D/g, "");
+    if (cep.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (data.erro) { toast.error("CEP não encontrado"); return; }
+      setForm((f) => ({
+        ...f,
+        street: data.logradouro || f.street,
+        city: data.localidade || f.city,
+        state: (data.uf || f.state).toUpperCase(),
+      }));
+      toast.success("Endereço preenchido!");
+    } catch {
+      toast.error("Falha ao buscar CEP");
+    } finally { setCepLoading(false); }
+  };
+
   if (!user) {
     return (
       <main className="mx-auto max-w-md px-4 py-20 min-h-screen text-center">
@@ -130,12 +151,16 @@ Aguardo a confirmação do pedido. Obrigado!`;
           <div className="grid sm:grid-cols-2 gap-3">
             <input required placeholder="Nome completo" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inp} />
             <input required placeholder="Telefone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inp} />
-            <input required placeholder="CEP" value={form.cep} onChange={(e) => setForm({ ...form, cep: e.target.value })} className={inp} />
+            <input required placeholder="CEP" value={form.cep}
+              onChange={(e) => { const v = e.target.value; setForm({ ...form, cep: v }); if (v.replace(/\D/g, "").length === 8) lookupCep(v); }}
+              onBlur={(e) => lookupCep(e.target.value)}
+              className={inp} />
             <input required placeholder="Cidade" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className={inp} />
             <input required placeholder="Rua" value={form.street} onChange={(e) => setForm({ ...form, street: e.target.value })} className={`${inp} sm:col-span-2`} />
             <input required placeholder="Número" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className={inp} />
             <input required placeholder="Estado (UF)" maxLength={2} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })} className={inp} />
           </div>
+          {cepLoading && <p className="text-xs text-muted-foreground">Buscando endereço pelo CEP…</p>}
 
           <h2 className="font-black text-lg pt-4">Pagamento</h2>
           <div className="grid sm:grid-cols-3 gap-2">
