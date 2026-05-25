@@ -134,6 +134,49 @@ const ORDER_STATUSES = [
   { value: "cancelled", label: "Cancelado" },
 ] as const;
 
+const STATUS_MESSAGES: Record<string, string> = {
+  pending: "Seu pedido está *aguardando pagamento*. Assim que confirmarmos, avisamos por aqui!",
+  paid: "Recebemos o seu pagamento! ✅ Seu pedido está sendo preparado para envio.",
+  shipped: "Seu pedido foi *enviado*! 📦 Em breve chega aí.",
+  delivered: "Seu pedido foi *entregue*! 🎉 Esperamos que aproveite. Obrigado pela compra!",
+  cancelled: "Seu pedido foi *cancelado*. Em caso de dúvidas, entre em contato conosco.",
+};
+
+function onlyDigits(s: string) { return (s ?? "").replace(/\D/g, ""); }
+function normalizePhone(raw: string) {
+  const d = onlyDigits(raw);
+  if (!d) return "";
+  if (d.startsWith("55")) return d;
+  return `55${d}`;
+}
+
+function buildStatusMessage(order: any, statusValue: string) {
+  const addr = order.shipping_address ?? {};
+  const label = ORDER_STATUSES.find((s) => s.value === statusValue)?.label ?? statusValue;
+  const items = (order.order_items ?? [])
+    .map((it: any) => `• ${it.quantity}x ${it.name} — ${it.color} / ${it.size}`)
+    .join("\n");
+  const deliveryTxt = order.delivery_days
+    ? `\n*Prazo de entrega:* ${order.delivery_days} dia(s)`
+    : "";
+  const extra = STATUS_MESSAGES[statusValue] ?? "";
+  return (
+`*Outsee — Atualização do Pedido #${order.order_number ?? order.id.slice(0,8)}*
+
+Olá, ${addr.name ?? "cliente"}!
+
+Status atual: *${label}*
+${extra}
+
+*Itens:*
+${items}
+
+*Total:* R$ ${Number(order.total).toFixed(2).replace(".", ",")}${deliveryTxt}
+
+Qualquer dúvida estamos à disposição. Obrigado por comprar na Outsee! 🖤`
+  );
+}
+
 function OrdersPanel() {
   const qc = useQueryClient();
   const { data: orders = [], isLoading } = useQuery({
@@ -148,13 +191,33 @@ function OrdersPanel() {
     },
   });
 
-  const updateOrder = async (id: string, patch: { status?: string; delivery_days?: number | null }) => {
-    const { error } = await supabase.from("orders").update(patch as any).eq("id", id);
+  const notifyClient = (order: any, statusValue: string) => {
+    const addr = order.shipping_address ?? {};
+    const phone = normalizePhone(addr.phone ?? "");
+    if (!phone) {
+      toast.warning("Cliente sem telefone — não foi possível notificar via WhatsApp.");
+      return;
+    }
+    const msg = buildStatusMessage(order, statusValue);
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+  };
+
+  const updateOrder = async (
+    order: any,
+    patch: { status?: string; delivery_days?: number | null },
+  ) => {
+    const { error } = await supabase.from("orders").update(patch as any).eq("id", order.id);
     if (error) toast.error(error.message);
     else {
-      toast.success("Pedido atualizado");
       qc.invalidateQueries({ queryKey: ["admin", "orders"] });
       qc.invalidateQueries({ queryKey: ["my-orders"] });
+      if (patch.status && patch.status !== order.status) {
+        toast.success("Status atualizado — abrindo WhatsApp do cliente…");
+        notifyClient({ ...order, ...patch }, patch.status);
+      } else {
+        toast.success("Pedido atualizado");
+      }
     }
   };
 
@@ -208,7 +271,7 @@ function OrdersPanel() {
             <div className="mt-4 grid sm:grid-cols-2 gap-3 pt-4 border-t border-border">
               <label className="block">
                 <span className="text-xs font-bold uppercase text-muted-foreground">Status</span>
-                <select value={o.status} onChange={(e) => updateOrder(o.id, { status: e.target.value })} className={inputCls + " mt-1"}>
+                <select value={o.status} onChange={(e) => updateOrder(o, { status: e.target.value })} className={inputCls + " mt-1"}>
                   {ORDER_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </label>
@@ -217,11 +280,14 @@ function OrdersPanel() {
                 <input type="number" min={0} defaultValue={o.delivery_days ?? ""} placeholder="Ex: 7"
                   onBlur={(e) => {
                     const v = e.target.value === "" ? null : Number(e.target.value);
-                    if (v !== o.delivery_days) updateOrder(o.id, { delivery_days: v });
+                    if (v !== o.delivery_days) updateOrder(o, { delivery_days: v });
                   }}
                   className={inputCls + " mt-1"} />
               </label>
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Ao alterar o status, o WhatsApp do cliente abrirá automaticamente com a mensagem pronta.
+            </p>
           </motion.div>
         );
       })}
