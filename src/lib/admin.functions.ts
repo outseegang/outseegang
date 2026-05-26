@@ -3,13 +3,13 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const ADMIN_CODE = "Ni88273465";
-
 export const redeemAdminCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ code: z.string().min(1).max(64) }).parse(input))
   .handler(async ({ data, context }) => {
-    if (data.code !== ADMIN_CODE) {
+    const expected = process.env.ADMIN_CODE;
+    if (!expected) throw new Error("Servidor mal configurado");
+    if (data.code !== expected) {
       throw new Error("Código inválido");
     }
     const { error } = await supabaseAdmin
