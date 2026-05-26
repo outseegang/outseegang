@@ -27,7 +27,8 @@ function Checkout() {
   const nav = useNavigate();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    name: "", phone: "", cep: "", street: "", number: "", city: "", state: "", payment: "pix", installments: 1,
+    name: "", phone: "", cep: "", street: "", number: "", neighborhood: "", complement: "",
+    city: "", state: "", payment: "pix", installments: 1,
   });
 
   useEffect(() => { if (items.length === 0) nav({ to: "/carrinho" }); }, [items, nav]);
@@ -44,6 +45,8 @@ function Checkout() {
       setForm((f) => ({
         ...f,
         street: data.logradouro || f.street,
+        neighborhood: data.bairro || f.neighborhood,
+        complement: data.complemento || f.complement,
         city: data.localidade || f.city,
         state: (data.uf || f.state).toUpperCase(),
       }));
@@ -81,7 +84,9 @@ function Checkout() {
         payment_method: form.payment,
         shipping_address: {
           name: form.name, phone: form.phone, cep: form.cep,
-          street: form.street, number: form.number, city: form.city, state: form.state,
+          street: form.street, number: form.number,
+          neighborhood: form.neighborhood, complement: form.complement,
+          city: form.city, state: form.state,
           installments: showInstallments ? form.installments : 1,
         },
       }).select().single();
@@ -119,7 +124,7 @@ ${itemsTxt}
 
 *Endereço de Entrega:*
 ${form.street}, ${form.number}
-${form.city} - ${form.state}
+${form.complement ? `Complemento: ${form.complement}\n` : ""}${form.neighborhood ? `Bairro: ${form.neighborhood}\n` : ""}${form.city} - ${form.state}
 CEP: ${form.cep}
 
 *Forma de Pagamento:* ${paymentLabel}
@@ -159,6 +164,8 @@ Aguardo a confirmação do pedido. Obrigado!`;
             <input required placeholder="Rua" value={form.street} onChange={(e) => setForm({ ...form, street: e.target.value })} className={`${inp} sm:col-span-2`} />
             <input required placeholder="Número" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className={inp} />
             <input required placeholder="Estado (UF)" maxLength={2} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })} className={inp} />
+            <input placeholder="Bairro" value={form.neighborhood} onChange={(e) => setForm({ ...form, neighborhood: e.target.value })} className={inp} />
+            <input placeholder="Complemento (opcional)" value={form.complement} onChange={(e) => setForm({ ...form, complement: e.target.value })} className={inp} />
           </div>
           {cepLoading && <p className="text-xs text-muted-foreground">Buscando endereço pelo CEP…</p>}
 
