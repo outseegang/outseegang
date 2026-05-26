@@ -11,6 +11,19 @@ import type { Product } from "@/components/ProductCard";
 
 export const Route = createFileRoute("/admin")({ component: Admin });
 
+const PRESET_TAGS = ["NOVO", "EM ALTA", "MENOR PREÇO", "MAIS VENDIDO", "PROMOÇÃO", "ÚLTIMAS UNIDADES", "EXCLUSIVO", "LANÇAMENTO"];
+
+function TagBadge({ tag }: { tag: string }) {
+  const t = tag.toUpperCase();
+  const color =
+    t === "NOVO" || t === "LANÇAMENTO" ? "bg-emerald-500 text-white"
+    : t === "EM ALTA" || t === "MAIS VENDIDO" ? "bg-orange-500 text-white"
+    : t === "MENOR PREÇO" || t === "PROMOÇÃO" ? "bg-rose-500 text-white"
+    : t === "ÚLTIMAS UNIDADES" ? "bg-amber-500 text-black"
+    : "bg-accent text-accent-foreground";
+  return <span className={`text-[10px] font-black tracking-wide rounded-full px-2 py-0.5 ${color}`}>{t}</span>;
+}
+
 function Admin() {
   const { user, isAdmin, loading } = useAuth();
   const nav = useNavigate();
@@ -90,6 +103,7 @@ function ProductsPanel() {
               <th className="p-3">Preço</th>
               <th className="p-3">Tamanhos</th>
               <th className="p-3">Estoque</th>
+              <th className="p-3">Etiquetas</th>
               <th className="p-3 text-right">Ações</th>
             </tr>
           </thead>
@@ -103,6 +117,7 @@ function ProductsPanel() {
                 <td className="p-3 text-accent font-bold">R$ {Number(p.price).toFixed(2)}</td>
                 <td className="p-3 text-xs">{p.sizes.join(", ")}</td>
                 <td className="p-3">{p.stock}</td>
+                <td className="p-3"><div className="flex flex-wrap gap-1">{(p as any).tags?.map((t: string) => <TagBadge key={t} tag={t} />)}</div></td>
                 <td className="p-3 text-right">
                   <button onClick={() => setEditing(p)} className="p-2 hover:bg-accent hover:text-accent-foreground rounded transition"><Pencil className="h-4 w-4" /></button>
                   <button onClick={() => del(p.id)} className="p-2 hover:bg-destructive rounded transition"><Trash2 className="h-4 w-4" /></button>
@@ -478,8 +493,12 @@ function ProductModal({ product, onClose, onSaved }: {
     stock: product?.stock ?? 0,
     image_url: product?.image_url ?? "moletom-preto",
     description: product?.description ?? "",
+    tags: ((product as any)?.tags ?? []) as string[],
   });
   const [loading, setLoading] = useState(false);
+  const [customTag, setCustomTag] = useState("");
+  const toggleTag = (t: string) =>
+    setForm((f) => ({ ...f, tags: f.tags.includes(t) ? f.tags.filter((x) => x !== t) : [...f.tags, t] }));
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -489,6 +508,7 @@ function ProductModal({ product, onClose, onSaved }: {
       price: Number(form.price),
       stock: Number(form.stock),
       sizes: form.sizes.split(",").map((s) => s.trim()).filter(Boolean),
+      tags: form.tags.map((t) => t.trim().toUpperCase()).filter(Boolean),
     };
     const { error } = product
       ? await supabase.from("products").update(payload).eq("id", product.id)
@@ -523,6 +543,30 @@ function ProductModal({ product, onClose, onSaved }: {
             <ImageField value={form.image_url} onChange={(url) => setForm({ ...form, image_url: url })} />
           </Field>
           <Field label="Descrição"><textarea rows={3} value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inputCls} /></Field>
+          <Field label="Etiquetas de destaque">
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {Array.from(new Set([...PRESET_TAGS, ...form.tags])).map((t) => {
+                  const active = form.tags.includes(t);
+                  return (
+                    <button type="button" key={t} onClick={() => toggleTag(t)}
+                      className={`text-[11px] font-bold rounded-full px-3 py-1 border transition ${active ? "bg-accent text-accent-foreground border-accent" : "border-border hover:border-accent"}`}>
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2">
+                <input value={customTag} onChange={(e) => setCustomTag(e.target.value)}
+                  placeholder="Criar etiqueta personalizada" className={`${inputCls} text-xs`} />
+                <button type="button" onClick={() => {
+                  const v = customTag.trim().toUpperCase();
+                  if (v && !form.tags.includes(v)) setForm((f) => ({ ...f, tags: [...f.tags, v] }));
+                  setCustomTag("");
+                }} className="rounded-lg bg-secondary px-3 text-xs font-bold hover:bg-muted transition">Adicionar</button>
+              </div>
+            </div>
+          </Field>
           <button disabled={loading} className="w-full rounded-lg bg-accent text-accent-foreground font-bold py-3 hover:opacity-90 transition disabled:opacity-50">
             {loading ? "Salvando…" : "Salvar"}
           </button>
