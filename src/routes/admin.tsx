@@ -330,24 +330,56 @@ function OrderEditModal({ order, onClose, onSaved }: { order: any; onClose: () =
     cep: addr.cep ?? "",
     street: addr.street ?? "",
     number: addr.number ?? "",
+    neighborhood: addr.neighborhood ?? "",
+    complement: addr.complement ?? "",
     city: addr.city ?? "",
     state: addr.state ?? "",
     installments: addr.installments ?? 1,
     payment_method: order.payment_method ?? "pix",
     total: Number(order.total ?? 0),
   });
+  const [items, setItems] = useState<any[]>(() =>
+    (order.order_items ?? []).map((it: any) => ({ ...it }))
+  );
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const updateItem = (id: string, patch: Partial<any>) =>
+    setItems((arr) => arr.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+  const removeItem = (id: string) => {
+    setItems((arr) => arr.filter((it) => it.id !== id));
+    setDeletedIds((d) => [...d, id]);
+  };
+  const itemsTotal = items.reduce((s, it) => s + Number(it.unit_price) * Number(it.quantity), 0);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    // Atualiza itens
+    for (const it of items) {
+      const { error } = await supabase.from("order_items").update({
+        name: it.name,
+        color: it.color,
+        size: it.size,
+        quantity: Number(it.quantity),
+        unit_price: Number(it.unit_price),
+      }).eq("id", it.id);
+      if (error) { setSaving(false); toast.error(error.message); return; }
+    }
+    // Remove itens excluídos
+    if (deletedIds.length) {
+      const { error } = await supabase.from("order_items").delete().in("id", deletedIds);
+      if (error) { setSaving(false); toast.error(error.message); return; }
+    }
     const { error } = await supabase.from("orders").update({
       payment_method: form.payment_method,
       total: Number(form.total),
       shipping_address: {
         ...addr,
         name: form.name, phone: form.phone, cep: form.cep,
-        street: form.street, number: form.number, city: form.city, state: form.state,
+        street: form.street, number: form.number,
+        neighborhood: form.neighborhood, complement: form.complement,
+        city: form.city, state: form.state,
         installments: Number(form.installments),
       },
     }).eq("id", order.id);
@@ -378,6 +410,10 @@ function OrderEditModal({ order, onClose, onSaved }: { order: any; onClose: () =
             <Field label="Número"><input value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className={inputCls} /></Field>
             <Field label="UF"><input maxLength={2} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })} className={inputCls} /></Field>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Bairro"><input value={form.neighborhood} onChange={(e) => setForm({ ...form, neighborhood: e.target.value })} className={inputCls} /></Field>
+            <Field label="Complemento"><input value={form.complement} onChange={(e) => setForm({ ...form, complement: e.target.value })} className={inputCls} /></Field>
+          </div>
           <div className="grid grid-cols-3 gap-3">
             <Field label="Pagamento">
               <select value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} className={inputCls}>
@@ -389,6 +425,38 @@ function OrderEditModal({ order, onClose, onSaved }: { order: any; onClose: () =
             <Field label="Parcelas"><input type="number" min={1} value={form.installments} onChange={(e) => setForm({ ...form, installments: Number(e.target.value) })} className={inputCls} /></Field>
             <Field label="Total (R$)"><input type="number" step="0.01" value={form.total} onChange={(e) => setForm({ ...form, total: Number(e.target.value) })} className={inputCls} /></Field>
           </div>
+
+          <div className="pt-2 border-t border-border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs uppercase font-bold text-muted-foreground">Itens do pedido</span>
+              <button type="button" onClick={() => setForm({ ...form, total: Number(itemsTotal.toFixed(2)) })}
+                className="text-xs underline text-accent">Recalcular total ({`R$ ${itemsTotal.toFixed(2)}`})</button>
+            </div>
+            <div className="space-y-2">
+              {items.length === 0 && <p className="text-xs text-muted-foreground">Sem itens.</p>}
+              {items.map((it) => (
+                <div key={it.id} className="grid grid-cols-12 gap-2 items-center bg-secondary/40 rounded-lg p-2">
+                  <input value={it.name} onChange={(e) => updateItem(it.id, { name: e.target.value })}
+                    placeholder="Produto" className={`${inputCls} col-span-4 text-xs`} />
+                  <input value={it.color} onChange={(e) => updateItem(it.id, { color: e.target.value })}
+                    placeholder="Cor" className={`${inputCls} col-span-2 text-xs`} />
+                  <input value={it.size} onChange={(e) => updateItem(it.id, { size: e.target.value })}
+                    placeholder="Tam" className={`${inputCls} col-span-1 text-xs`} />
+                  <input type="number" min={1} value={it.quantity}
+                    onChange={(e) => updateItem(it.id, { quantity: Number(e.target.value) })}
+                    placeholder="Qtd" className={`${inputCls} col-span-2 text-xs`} />
+                  <input type="number" step="0.01" value={it.unit_price}
+                    onChange={(e) => updateItem(it.id, { unit_price: Number(e.target.value) })}
+                    placeholder="Preço" className={`${inputCls} col-span-2 text-xs`} />
+                  <button type="button" onClick={() => removeItem(it.id)}
+                    className="col-span-1 p-2 rounded hover:bg-destructive hover:text-destructive-foreground transition">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <button disabled={saving} className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-accent text-accent-foreground font-bold py-3 hover:opacity-90 transition disabled:opacity-50">
             <Save className="h-4 w-4" /> {saving ? "Salvando…" : "Salvar alterações"}
           </button>
