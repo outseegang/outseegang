@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { createOrder } from "@/lib/orders.functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 
@@ -25,6 +26,7 @@ function Checkout() {
   const { user } = useAuth();
   const { items, total, clear } = useCart();
   const nav = useNavigate();
+  const createOrderFn = useServerFn(createOrder);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "", phone: "", cep: "", street: "", number: "", neighborhood: "", complement: "",
@@ -77,39 +79,37 @@ function Checkout() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data: order, error } = await supabase.from("orders").insert({
-        user_id: user.id,
-        status: "pending",
-        total: finalTotal,
-        payment_method: form.payment,
-        shipping_address: {
-          name: form.name, phone: form.phone, cep: form.cep,
-          street: form.street, number: form.number,
-          neighborhood: form.neighborhood, complement: form.complement,
-          city: form.city, state: form.state,
+      const order = await createOrderFn({
+        data: {
+          items: items.map((i) => ({
+            product_id: i.productId,
+            color: i.color,
+            size: i.size,
+            quantity: i.quantity,
+          })),
+          payment_method: form.payment as "pix" | "cartao" | "boleto",
           installments: showInstallments ? form.installments : 1,
+          shipping_address: {
+            name: form.name, phone: form.phone, cep: form.cep,
+            street: form.street, number: form.number,
+            neighborhood: form.neighborhood, complement: form.complement,
+            city: form.city, state: form.state,
+          },
         },
-      }).select().single();
-      if (error) throw error;
+      });
 
-      const { error: itemsErr } = await supabase.from("order_items").insert(
-        items.map((i) => ({
-          order_id: order.id, product_id: i.productId, name: i.name,
-          color: i.color, size: i.size, quantity: i.quantity, unit_price: i.price, image_url: i.image_url,
-        }))
-      );
-      if (itemsErr) throw itemsErr;
-
-      // Monta mensagem do WhatsApp
-      const orderNumber = (order as any).order_number ?? "—";
+      // Monta mensagem do WhatsApp com valores verificados no servidor
+      const orderNumber = order.order_number ?? "—";
+      const verifiedTotal = order.total;
+      const verifiedSubtotal = order.subtotal;
       const paymentLabel =
         form.payment === "pix" ? "PIX" : form.payment === "cartao" ? "Cartão de Crédito" : "Boleto Bancário";
-      const parcelaTxt = showInstallments && form.installments > 1
-        ? `Parcelado em ${form.installments}x de ${brl(installmentInfo.perInstallment)}${installmentInfo.hasInterest ? " (com juros)" : " (sem juros)"}`
+      const parcelaTxt = order.installments > 1
+        ? `Parcelado em ${order.installments}x de ${brl(order.per_installment)}${order.has_interest ? " (com juros)" : " (sem juros)"}`
         : "À vista";
 
-      const itemsTxt = items
-        .map((i) => `• ${i.quantity}x ${i.name} — Cor: ${i.color} | Tam: ${i.size} — ${brl(i.price * i.quantity)}`)
+      const itemsTxt = order.items
+        .map((i) => `• ${i.quantity}x ${i.name} — Cor: ${i.color} | Tam: ${i.size} — ${brl(i.unit_price * i.quantity)}`)
         .join("\n");
 
       const message =
@@ -130,8 +130,8 @@ CEP: ${form.cep}
 *Forma de Pagamento:* ${paymentLabel}
 *Condição:* ${parcelaTxt}
 
-*Subtotal:* ${brl(total)}
-${showInstallments && installmentInfo.hasInterest ? `*Juros:* ${brl(finalTotal - total)}\n` : ""}*Total:* ${brl(finalTotal)}
+*Subtotal:* ${brl(verifiedSubtotal)}
+${order.has_interest ? `*Juros:* ${brl(verifiedTotal - verifiedSubtotal)}\n` : ""}*Total:* ${brl(verifiedTotal)}
 
 Aguardo a confirmação do pedido. Obrigado!`;
 
