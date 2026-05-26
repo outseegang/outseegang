@@ -12,6 +12,16 @@ export interface Product {
   stock: number;
   image_url: string;
   description: string | null;
+  tags?: string[];
+}
+
+function tagClass(t: string) {
+  const u = t.toUpperCase();
+  if (u === "NOVO" || u === "LANÇAMENTO") return "bg-emerald-500 text-white";
+  if (u === "EM ALTA" || u === "MAIS VENDIDO") return "bg-orange-500 text-white";
+  if (u === "MENOR PREÇO" || u === "PROMOÇÃO") return "bg-rose-500 text-white";
+  if (u === "ÚLTIMAS UNIDADES") return "bg-amber-500 text-black";
+  return "bg-accent text-accent-foreground";
 }
 
 export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
@@ -25,7 +35,16 @@ export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
       className="group rounded-2xl bg-card border border-border overflow-hidden shadow-[var(--shadow-glow)]"
     >
       <Link to="/produto/$id" params={{ id: p.id }} className="block">
-      <div className="aspect-square overflow-hidden bg-muted">
+      <div className="relative aspect-square overflow-hidden bg-muted">
+        {p.tags && p.tags.length > 0 && (
+          <div className="absolute top-2 left-2 z-10 flex flex-col items-start gap-1">
+            {p.tags.map((t) => (
+              <span key={t} className={`text-[10px] font-black tracking-wide rounded-full px-2 py-0.5 shadow ${tagClass(t)}`}>
+                {t.toUpperCase()}
+              </span>
+            ))}
+          </div>
+        )}
         <img src={getProductImage(p.image_url)} alt={`${p.name} ${p.color}`}
           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
       </div>
