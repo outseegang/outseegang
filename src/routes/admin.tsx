@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, X, Upload, Package, Boxes, Save } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Upload, Package, Boxes, Save, LifeBuoy, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProductImage, productImages } from "@/lib/product-images";
@@ -31,7 +31,7 @@ function Admin() {
     if (!loading && (!user || !isAdmin)) nav({ to: "/perfil" });
   }, [loading, user, isAdmin, nav]);
 
-  const [tab, setTab] = useState<"products" | "orders">("products");
+  const [tab, setTab] = useState<"products" | "orders" | "support">("products");
 
   if (!isAdmin) return null;
 
@@ -46,6 +46,7 @@ function Admin() {
         {([
           { id: "products", label: "Produtos", icon: Boxes },
           { id: "orders", label: "Pedidos", icon: Package },
+          { id: "support", label: "Suporte", icon: LifeBuoy },
         ] as const).map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 px-5 py-3 font-bold text-sm border-b-2 transition ${
@@ -56,7 +57,9 @@ function Admin() {
         ))}
       </div>
 
-      {tab === "products" ? <ProductsPanel /> : <OrdersPanel />}
+      {tab === "products" && <ProductsPanel />}
+      {tab === "orders" && <OrdersPanel />}
+      {tab === "support" && <SupportPanel />}
     </main>
   );
 }
@@ -616,6 +619,149 @@ function ImageField({ value, onChange }: { value: string; onChange: (v: string) 
         {Object.keys(productImages).map((k) => <option key={k} value={k}>{k}</option>)}
       </select>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="URL ou slug" className={`${inputCls} text-xs`} />
+    </div>
+  );
+}
+
+type SupportTicket = {
+  id: string;
+  user_id: string | null;
+  user_email: string | null;
+  user_name: string | null;
+  subject: string | null;
+  transcript: Array<{ role: string; text: string }>;
+  status: string;
+  admin_notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  open: "Aberto",
+  in_progress: "Em atendimento",
+  resolved: "Resolvido",
+};
+
+function SupportPanel() {
+  const qc = useQueryClient();
+  const { data: tickets = [], isLoading } = useQuery({
+    queryKey: ["support_tickets"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("support_tickets")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as unknown as SupportTicket[];
+    },
+  });
+  const [active, setActive] = useState<SupportTicket | null>(null);
+  const refresh = () => qc.invalidateQueries({ queryKey: ["support_tickets"] });
+
+  return (
+    <section className="mt-8 grid lg:grid-cols-[360px_1fr] gap-6">
+      <div className="space-y-2">
+        <h2 className="font-black text-lg flex items-center gap-2"><LifeBuoy className="h-5 w-5" /> Tickets de suporte</h2>
+        {isLoading && <p className="text-xs text-muted-foreground">Carregando…</p>}
+        {!isLoading && tickets.length === 0 && (
+          <p className="text-xs text-muted-foreground">Nenhum ticket por enquanto.</p>
+        )}
+        <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
+          {tickets.map((t) => {
+            const isActive = active?.id === t.id;
+            return (
+              <button key={t.id} onClick={() => setActive(t)}
+                className={`w-full text-left rounded-xl border p-3 transition ${isActive ? "border-accent bg-accent/10" : "border-border hover:border-accent/60"}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold truncate">{t.user_name || t.user_email || "Visitante"}</span>
+                  <StatusPill status={t.status} />
+                </div>
+                <p className="text-xs text-muted-foreground truncate mt-1">{t.subject || t.transcript?.[t.transcript.length - 1]?.text || "(sem assunto)"}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{new Date(t.created_at).toLocaleString("pt-BR")}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="min-h-[400px]">
+        {!active ? (
+          <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground border border-dashed border-border rounded-2xl p-10">
+            <MessageCircle className="h-10 w-10 mb-2 opacity-60" />
+            <p className="text-sm">Selecione um ticket para ver a conversa.</p>
+          </div>
+        ) : (
+          <TicketDetail ticket={active} onChange={() => { refresh(); }} onClose={() => setActive(null)} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  const cls =
+    status === "open" ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+    : status === "in_progress" ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+    : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+  return <span className={`text-[10px] font-bold uppercase tracking-wider rounded-full border px-2 py-0.5 ${cls}`}>{STATUS_LABEL[status] ?? status}</span>;
+}
+
+function TicketDetail({ ticket, onChange, onClose }: { ticket: SupportTicket; onChange: () => void; onClose: () => void }) {
+  const [status, setStatus] = useState(ticket.status);
+  const [notes, setNotes] = useState(ticket.admin_notes ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setStatus(ticket.status); setNotes(ticket.admin_notes ?? ""); }, [ticket.id]);
+
+  const save = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("support_tickets")
+      .update({ status, admin_notes: notes }).eq("id", ticket.id);
+    setSaving(false);
+    if (error) toast.error(error.message); else { toast.success("Ticket atualizado"); onChange(); }
+  };
+
+  return (
+    <div className="border border-border rounded-2xl p-5 space-y-4 bg-card">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs text-muted-foreground">{new Date(ticket.created_at).toLocaleString("pt-BR")}</p>
+          <h3 className="text-lg font-black">{ticket.user_name || "Visitante"}</h3>
+          <p className="text-xs text-muted-foreground">{ticket.user_email || "sem email"}</p>
+          {ticket.subject && <p className="text-sm mt-1"><span className="text-muted-foreground">Assunto: </span>{ticket.subject}</p>}
+        </div>
+        <button onClick={onClose} className="p-2 rounded-full hover:bg-secondary"><X className="h-4 w-4" /></button>
+      </div>
+
+      <div className="space-y-2 max-h-[40vh] overflow-y-auto bg-secondary/30 rounded-xl p-3">
+        {ticket.transcript.length === 0 && <p className="text-xs text-muted-foreground">Sem conversa registrada.</p>}
+        {ticket.transcript.map((m, i) => (
+          <div key={i} className={`text-sm ${m.role === "user" ? "text-foreground" : "text-muted-foreground"}`}>
+            <span className="text-[10px] font-bold uppercase mr-2 opacity-70">{m.role === "user" ? "Cliente" : m.role === "assistant" ? "OutBot" : m.role}</span>
+            <span className="whitespace-pre-wrap">{m.text}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid sm:grid-cols-[200px_1fr] gap-3">
+        <Field label="Status">
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
+            <option value="open">Aberto</option>
+            <option value="in_progress">Em atendimento</option>
+            <option value="resolved">Resolvido</option>
+          </select>
+        </Field>
+        <Field label="Notas internas">
+          <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} />
+        </Field>
+      </div>
+
+      <div className="flex justify-end">
+        <button onClick={save} disabled={saving}
+          className="inline-flex items-center gap-2 rounded-lg bg-accent text-accent-foreground font-bold px-4 py-2 hover:opacity-90 transition disabled:opacity-50">
+          <Save className="h-4 w-4" /> {saving ? "Salvando…" : "Salvar"}
+        </button>
+      </div>
     </div>
   );
 }
