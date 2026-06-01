@@ -12,6 +12,7 @@ import appCss from "../styles.css?url";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { Header } from "@/components/Header";
+import { ChatBot } from "@/components/ChatBot";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -124,6 +125,7 @@ function RootComponent() {
         <CartProvider>
           <Header />
           <Outlet />
+          <ChatBot />
           <Toaster />
         </CartProvider>
       </AuthProvider>
