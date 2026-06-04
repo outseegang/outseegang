@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { getProductImage } from "@/lib/product-images";
 import type { Product } from "@/components/ProductCard";
 
@@ -36,6 +36,7 @@ function swatch(color: string): string {
 }
 
 export function GroupedProductCard({ variants, index = 0 }: { variants: Product[]; index?: number }) {
+  const navigate = useNavigate();
   const primaryIdx = Math.max(0, variants.findIndex((v) => v.is_primary));
   const [selected, setSelected] = useState(primaryIdx);
   const p = variants[selected];
@@ -97,7 +98,12 @@ export function GroupedProductCard({ variants, index = 0 }: { variants: Product[
                 key={v.id}
                 type="button"
                 title={v.color}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelected(i); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSelected(i);
+                  navigate({ to: "/catalogo", search: (prev: Record<string, unknown>) => ({ ...prev, cor: v.color }) });
+                }}
                 className={`h-6 w-6 rounded-full border-2 transition ${i === selected ? "border-accent scale-110" : "border-border hover:border-muted-foreground"}`}
                 style={{ backgroundColor: swatch(v.color) }}
                 aria-label={v.color}
