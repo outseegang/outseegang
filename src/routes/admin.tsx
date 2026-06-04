@@ -497,6 +497,7 @@ function ProductModal({ product, onClose, onSaved }: {
     image_url: product?.image_url ?? "moletom-preto",
     description: product?.description ?? "",
     tags: ((product as any)?.tags ?? []) as string[],
+    is_primary: ((product as any)?.is_primary ?? false) as boolean,
   });
   const [loading, setLoading] = useState(false);
   const [customTag, setCustomTag] = useState("");
@@ -513,9 +514,16 @@ function ProductModal({ product, onClose, onSaved }: {
       sizes: form.sizes.split(",").map((s) => s.trim()).filter(Boolean),
       tags: form.tags.map((t) => t.trim().toUpperCase()).filter(Boolean),
     };
+    // Se marcado como principal, desmarca outras variantes do mesmo nome+categoria
+    if (form.is_primary) {
+      const q = supabase.from("products").update({ is_primary: false } as never)
+        .eq("name", form.name).eq("category", form.category);
+      if (product) await q.neq("id", product.id);
+      else await q;
+    }
     const { error } = product
-      ? await supabase.from("products").update(payload).eq("id", product.id)
-      : await supabase.from("products").insert(payload);
+      ? await supabase.from("products").update(payload as never).eq("id", product.id)
+      : await supabase.from("products").insert(payload as never);
     setLoading(false);
     if (error) toast.error(error.message);
     else { toast.success("Salvo!"); onSaved(); }
@@ -546,6 +554,11 @@ function ProductModal({ product, onClose, onSaved }: {
             <ImageField value={form.image_url} onChange={(url) => setForm({ ...form, image_url: url })} />
           </Field>
           <Field label="Descrição"><textarea rows={3} value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inputCls} /></Field>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" checked={form.is_primary} onChange={(e) => setForm({ ...form, is_primary: e.target.checked })}
+              className="h-4 w-4 accent-[color:var(--accent)]" />
+            <span className="text-xs font-semibold">Variante principal (capa exibida no catálogo)</span>
+          </label>
           <Field label="Etiquetas de destaque">
             <div className="space-y-2">
               <div className="flex flex-wrap gap-2">
