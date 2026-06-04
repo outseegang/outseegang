@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
+import { ShoppingBag } from "lucide-react";
+import { toast } from "sonner";
 import { getProductImage } from "@/lib/product-images";
+import { useCart } from "@/contexts/CartContext";
 import type { Product } from "@/components/ProductCard";
 
 function tagClass(t: string) {
@@ -35,12 +38,49 @@ function swatch(color: string): string {
   return COLOR_MAP[key] ?? "#999999";
 }
 
-export function GroupedProductCard({ variants, index = 0 }: { variants: Product[]; index?: number }) {
-  const navigate = useNavigate();
-  const primaryIdx = Math.max(0, variants.findIndex((v) => v.is_primary));
-  const [selected, setSelected] = useState(primaryIdx);
+export function GroupedProductCard({
+  variants,
+  index = 0,
+  preferredColor,
+}: {
+  variants: Product[];
+  index?: number;
+  preferredColor?: string;
+}) {
+  const { add } = useCart();
+  const resolveIdx = (color?: string) => {
+    if (color) {
+      const i = variants.findIndex((v) => v.color.trim().toLowerCase() === color.trim().toLowerCase());
+      if (i >= 0) return i;
+    }
+    return Math.max(0, variants.findIndex((v) => v.is_primary));
+  };
+  const [selected, setSelected] = useState(() => resolveIdx(preferredColor));
+  useEffect(() => {
+    setSelected(resolveIdx(preferredColor));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferredColor, variants.map((v) => v.id).join(",")]);
   const p = variants[selected];
   const totalStock = variants.reduce((s, v) => s + v.stock, 0);
+
+  const handleAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (p.stock <= 0) {
+      toast.error("Variante sem estoque");
+      return;
+    }
+    add({
+      productId: p.id,
+      name: p.name,
+      color: p.color,
+      size: p.sizes[0] ?? "Único",
+      price: Number(p.price),
+      image_url: p.image_url,
+      quantity: 1,
+    });
+    toast.success(`${p.name} (${p.color}) adicionado ao carrinho`);
+  };
 
   return (
     <motion.div
@@ -69,7 +109,9 @@ export function GroupedProductCard({ variants, index = 0 }: { variants: Product[
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-semibold leading-tight">{p.name}</h3>
-              <p className="text-xs text-muted-foreground">{p.color}</p>
+              <p className="text-xs text-muted-foreground">
+                Cor: <span className="font-semibold text-foreground">{p.color}</span>
+              </p>
             </div>
             <span className="text-xs rounded-full bg-secondary px-2 py-1">{p.category}</span>
           </div>
@@ -87,31 +129,41 @@ export function GroupedProductCard({ variants, index = 0 }: { variants: Product[
         </div>
       </Link>
 
-      {variants.length > 1 && (
-        <div className="px-4 pb-4 -mt-1">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">
-            {variants.length} cores
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {variants.map((v, i) => (
-              <button
-                key={v.id}
-                type="button"
-                title={v.color}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setSelected(i);
-                  navigate({ to: "/catalogo", search: (prev: Record<string, unknown>) => ({ ...prev, cor: v.color }) });
-                }}
-                className={`h-6 w-6 rounded-full border-2 transition ${i === selected ? "border-accent scale-110" : "border-border hover:border-muted-foreground"}`}
-                style={{ backgroundColor: swatch(v.color) }}
-                aria-label={v.color}
-              />
-            ))}
+      <div className="px-4 pb-4 -mt-1 space-y-3">
+        {variants.length > 1 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">
+              {variants.length} cores
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {variants.map((v, i) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  title={v.color}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelected(i);
+                  }}
+                  className={`h-6 w-6 rounded-full border-2 transition ${i === selected ? "border-accent scale-110 ring-2 ring-accent/40" : "border-border hover:border-muted-foreground"}`}
+                  style={{ backgroundColor: swatch(v.color) }}
+                  aria-label={v.color}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={p.stock <= 0}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-accent text-accent-foreground px-4 py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+        >
+          <ShoppingBag className="h-4 w-4" />
+          {p.stock <= 0 ? "Sem estoque" : "Adicionar ao carrinho"}
+        </button>
+      </div>
     </motion.div>
   );
 }
