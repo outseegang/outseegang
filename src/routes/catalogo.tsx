@@ -86,7 +86,7 @@ function Catalogo() {
   }, [all]);
 
   const setCorFilter = (color?: string) => {
-    navigate({ search: (prev) => ({ ...prev, cor: color, page: 1 }) });
+    navigate({ search: (prev: Search) => ({ ...prev, cor: color }) });
   };
 
   return (
