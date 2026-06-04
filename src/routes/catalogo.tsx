@@ -79,6 +79,16 @@ function Catalogo() {
 
   const cats = ["Todos", ...Array.from(new Set(all.map((p) => p.category)))];
 
+  const availableColors = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of all) set.add(p.color.trim());
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [all]);
+
+  const setCorFilter = (color?: string) => {
+    navigate({ search: (prev) => ({ ...prev, cor: color, page: 1 }) });
+  };
+
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 min-h-screen">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -101,6 +111,37 @@ function Catalogo() {
           ))}
         </div>
       </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground uppercase tracking-wide">Cores:</span>
+        {availableColors.map((c) => {
+          const isActive = activeCor === c.toLowerCase();
+          return (
+            <button
+              key={c}
+              type="button"
+              title={c}
+              onClick={() => setCorFilter(isActive ? undefined : c)}
+              className={`h-7 w-7 rounded-full border-2 transition ${isActive ? "border-accent scale-110 ring-2 ring-accent/30" : "border-border hover:border-muted-foreground"}`}
+              style={{ backgroundColor: swatch(c) }}
+              aria-label={c}
+            />
+          );
+        })}
+      </div>
+
+      {activeCor && (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Filtro ativo:</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 text-accent px-3 py-1 text-sm font-semibold">
+            <span className="inline-block h-3 w-3 rounded-full border border-current" style={{ backgroundColor: swatch(activeCor) }} />
+            {activeCor.charAt(0).toUpperCase() + activeCor.slice(1)}
+            <button onClick={() => setCorFilter(undefined)} className="ml-1 hover:opacity-70" aria-label="Remover filtro de cor">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </span>
+        </div>
+      )}
 
       {isLoading ? (
         <p className="text-center py-20 text-muted-foreground">Carregando…</p>
