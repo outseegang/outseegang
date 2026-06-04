@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
+import { X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type Product } from "@/components/ProductCard";
 import { GroupedProductCard } from "@/components/GroupedProductCard";
