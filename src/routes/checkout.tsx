@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { createOrder } from "@/lib/orders.functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/checkout")({ component: Checkout });
 
@@ -34,6 +35,29 @@ function Checkout() {
   });
 
   useEffect(() => { if (items.length === 0) nav({ to: "/carrinho" }); }, [items, nav]);
+
+  // Pré-preencher endereço salvo no perfil
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles")
+      .select("full_name, phone, cep, street, number, neighborhood, complement, city, state")
+      .eq("id", user.id).maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        setForm((f) => ({
+          ...f,
+          name: f.name || data.full_name || "",
+          phone: f.phone || data.phone || "",
+          cep: f.cep || data.cep || "",
+          street: f.street || data.street || "",
+          number: f.number || data.number || "",
+          neighborhood: f.neighborhood || data.neighborhood || "",
+          complement: f.complement || data.complement || "",
+          city: f.city || data.city || "",
+          state: f.state || data.state || "",
+        }));
+      });
+  }, [user]);
 
   const [cepLoading, setCepLoading] = useState(false);
   const lookupCep = async (raw: string) => {
@@ -97,6 +121,14 @@ function Checkout() {
           },
         },
       });
+
+      // Salva endereço no perfil para próximas compras
+      supabase.from("profiles").update({
+        full_name: form.name, phone: form.phone, cep: form.cep,
+        street: form.street, number: form.number,
+        neighborhood: form.neighborhood, complement: form.complement,
+        city: form.city, state: form.state,
+      }).eq("id", user.id).then(() => {});
 
       // Monta mensagem do WhatsApp com valores verificados no servidor
       const orderNumber = order.order_number ?? "—";

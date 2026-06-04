@@ -147,21 +147,45 @@ export type Database = {
       }
       profiles: {
         Row: {
+          cep: string | null
+          city: string | null
+          complement: string | null
           created_at: string
           full_name: string | null
           id: string
+          neighborhood: string | null
+          number: string | null
+          phone: string | null
+          state: string | null
+          street: string | null
           username: string | null
         }
         Insert: {
+          cep?: string | null
+          city?: string | null
+          complement?: string | null
           created_at?: string
           full_name?: string | null
           id: string
+          neighborhood?: string | null
+          number?: string | null
+          phone?: string | null
+          state?: string | null
+          street?: string | null
           username?: string | null
         }
         Update: {
+          cep?: string | null
+          city?: string | null
+          complement?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
+          neighborhood?: string | null
+          number?: string | null
+          phone?: string | null
+          state?: string | null
+          street?: string | null
           username?: string | null
         }
         Relationships: []
