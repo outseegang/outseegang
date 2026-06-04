@@ -13,6 +13,7 @@ export interface Product {
   image_url: string;
   description: string | null;
   tags?: string[];
+  is_primary?: boolean;
 }
 
 function tagClass(t: string) {
