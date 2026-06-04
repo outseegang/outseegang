@@ -41,9 +41,11 @@ export const Route = createFileRoute("/catalogo")({
 });
 
 function Catalogo() {
-  const { q: initQ, cat: initCat } = Route.useSearch();
+  const navigate = useNavigate({ from: "/catalogo" });
+  const { q: initQ, cat: initCat, cor: initCor } = Route.useSearch();
   const [query, setQuery] = useState(initQ ?? "");
   const [cat, setCat] = useState(initCat ?? "Todos");
+  const activeCor = initCor?.trim().toLowerCase() || undefined;
 
   const { data: all = [], isLoading } = useQuery({
     queryKey: ["products", "all"],
@@ -59,9 +61,10 @@ function Catalogo() {
     return all.filter((p) => {
       const matchCat = cat === "Todos" || p.category === cat;
       const matchTerm = !term || `${p.name} ${p.color} ${p.category} ${p.description ?? ""}`.toLowerCase().includes(term);
-      return matchCat && matchTerm;
+      const matchCor = !activeCor || p.color.trim().toLowerCase() === activeCor;
+      return matchCat && matchTerm && matchCor;
     });
-  }, [all, query, cat]);
+  }, [all, query, cat, activeCor]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, Product[]>();
