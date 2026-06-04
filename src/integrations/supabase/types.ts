@@ -108,6 +108,7 @@ export type Database = {
           description: string | null
           id: string
           image_url: string
+          is_primary: boolean
           name: string
           price: number
           sizes: string[]
@@ -122,6 +123,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url: string
+          is_primary?: boolean
           name: string
           price?: number
           sizes?: string[]
@@ -136,6 +138,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string
+          is_primary?: boolean
           name?: string
           price?: number
           sizes?: string[]
