@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { ProductCard, type Product } from "@/components/ProductCard";
+import { type Product } from "@/components/ProductCard";
+import { GroupedProductCard } from "@/components/GroupedProductCard";
 
 type Search = { q?: string; cat?: string };
 
@@ -38,6 +39,17 @@ function Catalogo() {
     });
   }, [all, query, cat]);
 
+  const grouped = useMemo(() => {
+    const map = new Map<string, Product[]>();
+    for (const p of filtered) {
+      const key = `${p.name}__${p.category}`;
+      const arr = map.get(key) ?? [];
+      arr.push(p);
+      map.set(key, arr);
+    }
+    return Array.from(map.values());
+  }, [filtered]);
+
   const cats = ["Todos", ...Array.from(new Set(all.map((p) => p.category)))];
 
   return (
@@ -65,11 +77,13 @@ function Catalogo() {
 
       {isLoading ? (
         <p className="text-center py-20 text-muted-foreground">Carregando…</p>
-      ) : filtered.length === 0 ? (
+      ) : grouped.length === 0 ? (
         <p className="text-center py-20 text-muted-foreground">Nenhum produto encontrado.</p>
       ) : (
         <div className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filtered.map((p, i) => <ProductCard key={p.id} p={p} index={i} />)}
+          {grouped.map((variants, i) => (
+            <GroupedProductCard key={variants[0].id} variants={variants} index={i} />
+          ))}
         </div>
       )}
     </main>
