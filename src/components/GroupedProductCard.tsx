@@ -36,6 +36,7 @@ function swatch(color: string): string {
 }
 
 export function GroupedProductCard({ variants, index = 0 }: { variants: Product[]; index?: number }) {
+  const navigate = useNavigate();
   const primaryIdx = Math.max(0, variants.findIndex((v) => v.is_primary));
   const [selected, setSelected] = useState(primaryIdx);
   const p = variants[selected];
