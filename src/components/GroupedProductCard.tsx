@@ -48,6 +48,7 @@ export function GroupedProductCard({
   preferredColor?: string;
 }) {
   const { add } = useCart();
+  const groupKey = `outsee_variant_${variants[0]?.name}_${variants[0]?.category}`;
   const resolveIdx = (color?: string) => {
     if (color) {
       const i = variants.findIndex((v) => v.color.trim().toLowerCase() === color.trim().toLowerCase());
@@ -55,11 +56,25 @@ export function GroupedProductCard({
     }
     return Math.max(0, variants.findIndex((v) => v.is_primary));
   };
-  const [selected, setSelected] = useState(() => resolveIdx(preferredColor));
+  const [selected, setSelected] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(groupKey);
+      if (saved) {
+        const i = variants.findIndex((v) => v.id === saved);
+        if (i >= 0) return i;
+      }
+    }
+    return resolveIdx(preferredColor);
+  });
   useEffect(() => {
-    setSelected(resolveIdx(preferredColor));
+    if (preferredColor) setSelected(resolveIdx(preferredColor));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preferredColor, variants.map((v) => v.id).join(",")]);
+  }, [preferredColor]);
+  useEffect(() => {
+    if (typeof window !== "undefined" && variants[selected]) {
+      localStorage.setItem(groupKey, variants[selected].id);
+    }
+  }, [selected, groupKey, variants]);
   const p = variants[selected];
   const totalStock = variants.reduce((s, v) => s + v.stock, 0);
 
