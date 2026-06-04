@@ -36,7 +36,8 @@ function swatch(color: string): string {
 }
 
 export function GroupedProductCard({ variants, index = 0 }: { variants: Product[]; index?: number }) {
-  const [selected, setSelected] = useState(0);
+  const primaryIdx = Math.max(0, variants.findIndex((v) => v.is_primary));
+  const [selected, setSelected] = useState(primaryIdx);
   const p = variants[selected];
   const totalStock = variants.reduce((s, v) => s + v.stock, 0);
 
