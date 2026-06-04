@@ -7,12 +7,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { type Product } from "@/components/ProductCard";
 import { GroupedProductCard } from "@/components/GroupedProductCard";
 
-type Search = { q?: string; cat?: string };
+type Search = { q?: string; cat?: string; cor?: string };
+
+const COLOR_MAP: Record<string, string> = {
+  preto: "#0a0a0a", preta: "#0a0a0a", black: "#0a0a0a",
+  branco: "#f5f5f5", branca: "#f5f5f5", white: "#f5f5f5",
+  cinza: "#7a7a7a", grafite: "#3a3a3a", chumbo: "#4a4a4a",
+  vermelho: "#dc2626", vermelha: "#dc2626",
+  azul: "#2563eb", "azul marinho": "#0c2340", marinho: "#0c2340",
+  verde: "#16a34a", militar: "#4a5d23", oliva: "#6b7a3a",
+  amarelo: "#facc15", amarela: "#facc15",
+  rosa: "#ec4899", pink: "#ec4899",
+  roxo: "#7c3aed", lilas: "#a78bfa", "lilás": "#a78bfa",
+  laranja: "#f97316",
+  marrom: "#78350f", caramelo: "#b45309", bege: "#d4b896", areia: "#c9b99a",
+  nude: "#e8c5a0",
+  vinho: "#7c1d2d", bordo: "#7c1d2d", bordô: "#7c1d2d",
+  dourado: "#c9a84c", prata: "#c0c0c0",
+};
+
+function swatch(color: string): string {
+  const key = color.trim().toLowerCase();
+  return COLOR_MAP[key] ?? "#999999";
+}
 
 export const Route = createFileRoute("/catalogo")({
   validateSearch: (s: Record<string, unknown>): Search => ({
     q: typeof s.q === "string" ? s.q : undefined,
     cat: typeof s.cat === "string" ? s.cat : undefined,
+    cor: typeof s.cor === "string" ? s.cor : undefined,
   }),
   component: Catalogo,
 });
