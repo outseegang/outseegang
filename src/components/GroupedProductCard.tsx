@@ -168,15 +168,16 @@ export function GroupedProductCard({
         {isAdmin && (
           <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
             {editingColor ? (
-              <form onSubmit={saveColor} className="flex gap-1.5">
+              <form onSubmit={saveColor} className="flex items-center gap-1.5">
                 <input
+                  type="color"
                   autoFocus
                   value={colorDraft}
                   onChange={(e) => setColorDraft(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
-                  placeholder="Nome da cor"
-                  className="flex-1 rounded-md bg-secondary px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="h-8 w-8 rounded cursor-pointer border-0 p-0"
                 />
+                <span className="text-xs text-muted-foreground flex-1">{p.color}</span>
                 <button type="submit" className="rounded-md bg-accent text-accent-foreground p-1.5" title="Salvar">
                   <Check className="h-3.5 w-3.5" />
                 </button>
@@ -187,7 +188,7 @@ export function GroupedProductCard({
             ) : (
               <button
                 type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setColorDraft(p.color); setEditingColor(true); }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setColorDraft(p.color_hex ?? swatch(p.color, p.color_hex)); setEditingColor(true); }}
                 className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wide rounded-full bg-secondary px-2 py-1 hover:bg-muted transition"
               >
                 <Pencil className="h-3 w-3" /> Editar cor ({p.color})
