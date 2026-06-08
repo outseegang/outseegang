@@ -36,7 +36,8 @@ const COLOR_MAP: Record<string, string> = {
   dourado: "#c9a84c", prata: "#c0c0c0",
 };
 
-function swatch(color: string): string {
+function swatch(color: string, hex: string | null): string {
+  if (hex) return hex;
   const key = color.trim().toLowerCase();
   return COLOR_MAP[key] ?? "#999999";
 }
