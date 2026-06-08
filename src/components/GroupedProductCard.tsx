@@ -109,8 +109,8 @@ export function GroupedProductCard({
     e.preventDefault();
     e.stopPropagation();
     const next = colorDraft.trim();
-    if (!next || next === p.color) { setEditingColor(false); return; }
-    const { error } = await supabase.from("products").update({ color: next }).eq("id", p.id);
+    if (!next || next === (p.color_hex ?? swatch(p.color, p.color_hex))) { setEditingColor(false); return; }
+    const { error } = await supabase.from("products").update({ color_hex: next }).eq("id", p.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Cor atualizada");
     setEditingColor(false);
