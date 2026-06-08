@@ -36,7 +36,8 @@ const COLOR_MAP: Record<string, string> = {
   dourado: "#c9a84c", prata: "#c0c0c0",
 };
 
-function swatch(color: string): string {
+function swatch(color: string, hex: string | null): string {
+  if (hex) return hex;
   const key = color.trim().toLowerCase();
   return COLOR_MAP[key] ?? "#999999";
 }
@@ -108,8 +109,8 @@ export function GroupedProductCard({
     e.preventDefault();
     e.stopPropagation();
     const next = colorDraft.trim();
-    if (!next || next === p.color) { setEditingColor(false); return; }
-    const { error } = await supabase.from("products").update({ color: next }).eq("id", p.id);
+    if (!next || next === (p.color_hex ?? swatch(p.color, p.color_hex))) { setEditingColor(false); return; }
+    const { error } = await supabase.from("products").update({ color_hex: next }).eq("id", p.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Cor atualizada");
     setEditingColor(false);
@@ -167,15 +168,16 @@ export function GroupedProductCard({
         {isAdmin && (
           <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
             {editingColor ? (
-              <form onSubmit={saveColor} className="flex gap-1.5">
+              <form onSubmit={saveColor} className="flex items-center gap-1.5">
                 <input
+                  type="color"
                   autoFocus
                   value={colorDraft}
                   onChange={(e) => setColorDraft(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
-                  placeholder="Nome da cor"
-                  className="flex-1 rounded-md bg-secondary px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="h-8 w-8 rounded cursor-pointer border-0 p-0"
                 />
+                <span className="text-xs text-muted-foreground flex-1">{p.color}</span>
                 <button type="submit" className="rounded-md bg-accent text-accent-foreground p-1.5" title="Salvar">
                   <Check className="h-3.5 w-3.5" />
                 </button>
@@ -186,7 +188,7 @@ export function GroupedProductCard({
             ) : (
               <button
                 type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setColorDraft(p.color); setEditingColor(true); }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setColorDraft(p.color_hex ?? swatch(p.color, p.color_hex)); setEditingColor(true); }}
                 className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wide rounded-full bg-secondary px-2 py-1 hover:bg-muted transition"
               >
                 <Pencil className="h-3 w-3" /> Editar cor ({p.color})
@@ -211,7 +213,7 @@ export function GroupedProductCard({
                     setSelected(i);
                   }}
                   className={`h-6 w-6 rounded-full border-2 transition ${i === selected ? "border-accent scale-110 ring-2 ring-accent/40" : "border-border hover:border-muted-foreground"}`}
-                  style={{ backgroundColor: swatch(v.color) }}
+                  style={{ backgroundColor: swatch(v.color, v.color_hex) }}
                   aria-label={v.color}
                 />
               ))}

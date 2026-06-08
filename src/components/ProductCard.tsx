@@ -7,6 +7,7 @@ export interface Product {
   name: string;
   category: string;
   color: string;
+  color_hex: string | null;
   price: number;
   sizes: string[];
   stock: number;
