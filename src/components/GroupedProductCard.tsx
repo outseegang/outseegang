@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Check, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { getProductImage } from "@/lib/product-images";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Product } from "@/components/ProductCard";
 
 function tagClass(t: string) {
@@ -48,6 +51,10 @@ export function GroupedProductCard({
   preferredColor?: string;
 }) {
   const { add } = useCart();
+  const { isAdmin } = useAuth();
+  const qc = useQueryClient();
+  const [editingColor, setEditingColor] = useState(false);
+  const [colorDraft, setColorDraft] = useState("");
   const groupKey = `outsee_variant_${variants[0]?.name}_${variants[0]?.category}`;
   const resolveIdx = (color?: string) => {
     if (color) {
@@ -95,6 +102,18 @@ export function GroupedProductCard({
       quantity: 1,
     });
     toast.success(`${p.name} (${p.color}) adicionado ao carrinho`);
+  };
+
+  const saveColor = async (e: React.MouseEvent | React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const next = colorDraft.trim();
+    if (!next || next === p.color) { setEditingColor(false); return; }
+    const { error } = await supabase.from("products").update({ color: next }).eq("id", p.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Cor atualizada");
+    setEditingColor(false);
+    qc.invalidateQueries({ queryKey: ["products"] });
   };
 
   return (
@@ -145,6 +164,36 @@ export function GroupedProductCard({
       </Link>
 
       <div className="px-4 pb-4 -mt-1 space-y-3">
+        {isAdmin && (
+          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+            {editingColor ? (
+              <form onSubmit={saveColor} className="flex gap-1.5">
+                <input
+                  autoFocus
+                  value={colorDraft}
+                  onChange={(e) => setColorDraft(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Nome da cor"
+                  className="flex-1 rounded-md bg-secondary px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+                <button type="submit" className="rounded-md bg-accent text-accent-foreground p-1.5" title="Salvar">
+                  <Check className="h-3.5 w-3.5" />
+                </button>
+                <button type="button" onClick={() => setEditingColor(false)} className="rounded-md bg-secondary p-1.5" title="Cancelar">
+                  <span className="text-xs px-0.5">×</span>
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setColorDraft(p.color); setEditingColor(true); }}
+                className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wide rounded-full bg-secondary px-2 py-1 hover:bg-muted transition"
+              >
+                <Pencil className="h-3 w-3" /> Editar cor ({p.color})
+              </button>
+            )}
+          </div>
+        )}
         {variants.length > 1 && (
           <div>
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">
