@@ -212,7 +212,7 @@ export function GroupedProductCard({
                     setSelected(i);
                   }}
                   className={`h-6 w-6 rounded-full border-2 transition ${i === selected ? "border-accent scale-110 ring-2 ring-accent/40" : "border-border hover:border-muted-foreground"}`}
-                  style={{ backgroundColor: swatch(v.color) }}
+                  style={{ backgroundColor: swatch(v.color, v.color_hex) }}
                   aria-label={v.color}
                 />
               ))}
