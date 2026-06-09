@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, X, Upload, Package, Boxes, Save, LifeBuoy, MessageCircle } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Upload, Package, Boxes, Save, LifeBuoy, MessageCircle, Palette, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProductImage, productImages } from "@/lib/product-images";
