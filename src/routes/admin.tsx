@@ -610,6 +610,168 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <label className="block"><span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">{label}</span><div className="mt-1">{children}</div></label>;
 }
 
+type ProductVariant = Product & { color_hex?: string | null };
+
+function VariantsQuickEditor({ products, onChange }: { products: Product[]; onChange: () => void }) {
+  const groups = new Map<string, ProductVariant[]>();
+  for (const p of products as ProductVariant[]) {
+    const key = `${p.name}__${p.category}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(p);
+  }
+  const entries = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  const [openKey, setOpenKey] = useState<string | null>(entries[0]?.[0] ?? null);
+
+  return (
+    <section className="mt-8">
+      <h2 className="text-lg font-black flex items-center gap-2 mb-3">
+        <Palette className="h-5 w-5 text-accent" /> Variantes por produto
+      </h2>
+      <p className="text-xs text-muted-foreground mb-4">
+        Edite as cores rápidas de cada variante, adicione novas cores ou remova as existentes — tudo se reflete no catálogo automaticamente.
+      </p>
+      <div className="space-y-2">
+        {entries.map(([key, vars]) => {
+          const isOpen = openKey === key;
+          const base = vars[0];
+          return (
+            <div key={key} className="rounded-2xl border border-border bg-card overflow-hidden">
+              <button
+                onClick={() => setOpenKey(isOpen ? null : key)}
+                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-secondary/40 transition"
+              >
+                <div className="flex items-center gap-3">
+                  {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <div>
+                    <p className="font-bold text-sm">{base.name}</p>
+                    <p className="text-[11px] text-muted-foreground">{base.category} · {vars.length} {vars.length === 1 ? "variante" : "variantes"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {vars.map((v) => (
+                    <span key={v.id} title={v.color}
+                      className="h-5 w-5 rounded-full border border-border"
+                      style={{ backgroundColor: (v as any).color_hex ?? "#999" }} />
+                  ))}
+                </div>
+              </button>
+              {isOpen && <VariantsList variants={vars} onChange={onChange} />}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function VariantsList({ variants, onChange }: { variants: ProductVariant[]; onChange: () => void }) {
+  const [rows, setRows] = useState(() =>
+    variants.map((v) => ({
+      id: v.id,
+      color: v.color,
+      color_hex: (v as any).color_hex ?? "#000000",
+    }))
+  );
+  const [busy, setBusy] = useState(false);
+  const base = variants[0];
+
+  useEffect(() => {
+    setRows(variants.map((v) => ({
+      id: v.id,
+      color: v.color,
+      color_hex: (v as any).color_hex ?? "#000000",
+    })));
+  }, [variants]);
+
+  const update = (id: string, patch: Partial<{ color: string; color_hex: string }>) =>
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+
+  const saveAll = async () => {
+    setBusy(true);
+    for (const r of rows) {
+      const orig = variants.find((v) => v.id === r.id);
+      if (!orig) continue;
+      if (orig.color === r.color && ((orig as any).color_hex ?? null) === r.color_hex) continue;
+      const { error } = await supabase.from("products")
+        .update({ color: r.color, color_hex: r.color_hex } as never)
+        .eq("id", r.id);
+      if (error) { setBusy(false); toast.error(error.message); return; }
+    }
+    setBusy(false);
+    toast.success("Cores atualizadas");
+    onChange();
+  };
+
+  const addVariant = async () => {
+    setBusy(true);
+    const payload = {
+      name: base.name,
+      category: base.category,
+      color: "Nova cor",
+      color_hex: "#888888",
+      price: base.price,
+      sizes: base.sizes,
+      stock: 0,
+      image_url: base.image_url,
+      description: (base as any).description ?? "",
+      tags: (base as any).tags ?? [],
+      is_primary: false,
+    };
+    const { error } = await supabase.from("products").insert(payload as never);
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Variante adicionada");
+    onChange();
+  };
+
+  const removeVariant = async (id: string) => {
+    if (variants.length <= 1) { toast.error("Mantenha ao menos uma variante."); return; }
+    if (!confirm("Remover essa variante de cor?")) return;
+    setBusy(true);
+    const { error } = await supabase.from("products").delete().eq("id", id);
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Variante removida");
+    onChange();
+  };
+
+  return (
+    <div className="border-t border-border p-4 space-y-3 bg-secondary/20">
+      <div className="space-y-2">
+        {rows.map((r) => (
+          <div key={r.id} className="flex items-center gap-2">
+            <input type="color" value={r.color_hex}
+              onChange={(e) => update(r.id, { color_hex: e.target.value })}
+              className="h-9 w-12 rounded-lg cursor-pointer border border-border bg-secondary" />
+            <input value={r.color_hex}
+              onChange={(e) => update(r.id, { color_hex: e.target.value })}
+              className={`${inputCls} font-mono text-xs w-28`} />
+            <input value={r.color}
+              onChange={(e) => update(r.id, { color: e.target.value })}
+              placeholder="Nome da cor"
+              className={`${inputCls} flex-1`} />
+            <button type="button" onClick={() => removeVariant(r.id)} disabled={busy}
+              title="Remover variante"
+              className="p-2 rounded-lg bg-secondary hover:bg-destructive hover:text-destructive-foreground transition disabled:opacity-50">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-2 pt-2">
+        <button type="button" onClick={saveAll} disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg bg-accent text-accent-foreground font-bold px-4 py-2 text-sm hover:opacity-90 transition disabled:opacity-50">
+          <Save className="h-4 w-4" /> Salvar cores
+        </button>
+        <button type="button" onClick={addVariant} disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg bg-secondary font-bold px-4 py-2 text-sm hover:bg-muted transition disabled:opacity-50">
+          <Plus className="h-4 w-4" /> Adicionar cor
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ImageField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [uploading, setUploading] = useState(false);
 
