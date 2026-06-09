@@ -491,6 +491,7 @@ function ProductModal({ product, onClose, onSaved }: {
     name: product?.name ?? "",
     category: product?.category ?? "Moletom",
     color: product?.color ?? "",
+    color_hex: (product as any)?.color_hex ?? "#000000",
     price: product?.price ?? 0,
     sizes: product?.sizes.join(", ") ?? "P, M, G",
     stock: product?.stock ?? 0,
@@ -545,6 +546,16 @@ function ProductModal({ product, onClose, onSaved }: {
             <Field label="Categoria"><input required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className={inputCls} /></Field>
             <Field label="Cor"><input required value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className={inputCls} /></Field>
           </div>
+          <Field label="Cor (visual)">
+            <div className="flex items-center gap-3">
+              <input type="color" value={form.color_hex}
+                onChange={(e) => setForm({ ...form, color_hex: e.target.value })}
+                className="h-10 w-16 rounded-lg bg-secondary border border-border cursor-pointer" />
+              <input value={form.color_hex}
+                onChange={(e) => setForm({ ...form, color_hex: e.target.value })}
+                placeholder="#000000" className={`${inputCls} font-mono`} />
+            </div>
+          </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Preço (R$)"><input required type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} className={inputCls} /></Field>
             <Field label="Estoque"><input required type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} className={inputCls} /></Field>
