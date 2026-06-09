@@ -140,6 +140,8 @@ function ProductsPanel() {
           />
         )}
       </AnimatePresence>
+
+      <VariantsQuickEditor products={products} onChange={refresh} />
     </div>
   );
 }
