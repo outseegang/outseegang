@@ -518,6 +518,7 @@ function OrderEditModal({ order, onClose, onSaved }: { order: any; onClose: () =
 function ProductModal({ product, onClose, onSaved }: {
   product: Product | null; onClose: () => void; onSaved: () => void;
 }) {
+  const { user } = useAuth();
   const [form, setForm] = useState({
     name: product?.name ?? "",
     category: product?.category ?? "Moletom",
@@ -558,7 +559,19 @@ function ProductModal({ product, onClose, onSaved }: {
       : await supabase.from("products").insert(payload as never);
     setLoading(false);
     if (error) toast.error(error.message);
-    else { toast.success("Salvo!"); onSaved(); }
+    else {
+      if (user) {
+        await logAudit({
+          actor_user_id: user.id,
+          actor_email: user.email ?? null,
+          product_id: product?.id ?? null,
+          product_name: payload.name,
+          action: product ? "update" : "create",
+          changes: product ? diffFields(product, payload) : { created: payload },
+        });
+      }
+      toast.success("Salvo!"); onSaved();
+    }
   };
 
   return (
