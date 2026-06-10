@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, X, Upload, Package, Boxes, Save, LifeBuoy, MessageCircle, Palette, ChevronDown, ChevronRight } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Upload, Package, Boxes, Save, LifeBuoy, MessageCircle, Palette, ChevronDown, ChevronRight, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProductImage, productImages } from "@/lib/product-images";
@@ -31,7 +31,7 @@ function Admin() {
     if (!loading && (!user || !isAdmin)) nav({ to: "/perfil" });
   }, [loading, user, isAdmin, nav]);
 
-  const [tab, setTab] = useState<"products" | "orders" | "support">("products");
+  const [tab, setTab] = useState<"products" | "orders" | "support" | "logs">("products");
 
   if (!isAdmin) return null;
 
@@ -47,6 +47,7 @@ function Admin() {
           { id: "products", label: "Produtos", icon: Boxes },
           { id: "orders", label: "Pedidos", icon: Package },
           { id: "support", label: "Suporte", icon: LifeBuoy },
+          { id: "logs", label: "Logs", icon: History },
         ] as const).map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 px-5 py-3 font-bold text-sm border-b-2 transition ${
@@ -60,6 +61,7 @@ function Admin() {
       {tab === "products" && <ProductsPanel />}
       {tab === "orders" && <OrdersPanel />}
       {tab === "support" && <SupportPanel />}
+      {tab === "logs" && <LogsPanel />}
     </main>
   );
 }
