@@ -12,6 +12,7 @@ export function useProductsRealtime() {
         { event: "*", schema: "public", table: "products" },
         () => {
           qc.invalidateQueries({ queryKey: ["products"] });
+          qc.invalidateQueries({ queryKey: ["product"] });
         }
       )
       .subscribe();
