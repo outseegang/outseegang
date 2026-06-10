@@ -13,6 +13,33 @@ export const Route = createFileRoute("/admin")({ component: Admin });
 
 const PRESET_TAGS = ["NOVO", "EM ALTA", "MENOR PREÇO", "MAIS VENDIDO", "PROMOÇÃO", "ÚLTIMAS UNIDADES", "EXCLUSIVO", "LANÇAMENTO"];
 
+const TRACKED_FIELDS = ["color", "color_hex", "price", "sizes", "stock", "image_url", "name"] as const;
+
+function diffFields(orig: any, next: any): Record<string, { old: any; new: any }> {
+  const out: Record<string, { old: any; new: any }> = {};
+  for (const f of TRACKED_FIELDS) {
+    const a = orig?.[f];
+    const b = next?.[f];
+    const eq = Array.isArray(a) && Array.isArray(b)
+      ? JSON.stringify(a) === JSON.stringify(b)
+      : (a ?? null) === (b ?? null);
+    if (!eq) out[f] = { old: a ?? null, new: b ?? null };
+  }
+  return out;
+}
+
+async function logAudit(entry: {
+  actor_user_id: string;
+  actor_email?: string | null;
+  product_id?: string | null;
+  product_name?: string | null;
+  action: "create" | "update" | "delete";
+  changes: Record<string, any>;
+}) {
+  if (entry.action === "update" && Object.keys(entry.changes).length === 0) return;
+  await supabase.from("admin_audit_log" as never).insert(entry as never);
+}
+
 function TagBadge({ tag }: { tag: string }) {
   const t = tag.toUpperCase();
   const color =
