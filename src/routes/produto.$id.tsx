@@ -8,10 +8,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { getProductImage } from "@/lib/product-images";
 import { useCart } from "@/contexts/CartContext";
 import type { Product } from "@/components/ProductCard";
+import { useProductsRealtime } from "@/hooks/useProductsRealtime";
 
 export const Route = createFileRoute("/produto/$id")({ component: ProductDetail });
 
 function ProductDetail() {
+  useProductsRealtime();
   const { id } = Route.useParams();
   const nav = useNavigate();
   const { add } = useCart();
