@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, X, Upload, Package, Boxes, Save, LifeBuoy, MessageCircle, Palette, ChevronDown, ChevronRight } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Upload, Package, Boxes, Save, LifeBuoy, MessageCircle, Palette, ChevronDown, ChevronRight, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProductImage, productImages } from "@/lib/product-images";
@@ -12,6 +12,33 @@ import type { Product } from "@/components/ProductCard";
 export const Route = createFileRoute("/admin")({ component: Admin });
 
 const PRESET_TAGS = ["NOVO", "EM ALTA", "MENOR PREÇO", "MAIS VENDIDO", "PROMOÇÃO", "ÚLTIMAS UNIDADES", "EXCLUSIVO", "LANÇAMENTO"];
+
+const TRACKED_FIELDS = ["color", "color_hex", "price", "sizes", "stock", "image_url", "name"] as const;
+
+function diffFields(orig: any, next: any): Record<string, { old: any; new: any }> {
+  const out: Record<string, { old: any; new: any }> = {};
+  for (const f of TRACKED_FIELDS) {
+    const a = orig?.[f];
+    const b = next?.[f];
+    const eq = Array.isArray(a) && Array.isArray(b)
+      ? JSON.stringify(a) === JSON.stringify(b)
+      : (a ?? null) === (b ?? null);
+    if (!eq) out[f] = { old: a ?? null, new: b ?? null };
+  }
+  return out;
+}
+
+async function logAudit(entry: {
+  actor_user_id: string;
+  actor_email?: string | null;
+  product_id?: string | null;
+  product_name?: string | null;
+  action: "create" | "update" | "delete";
+  changes: Record<string, any>;
+}) {
+  if (entry.action === "update" && Object.keys(entry.changes).length === 0) return;
+  await supabase.from("admin_audit_log" as never).insert(entry as never);
+}
 
 function TagBadge({ tag }: { tag: string }) {
   const t = tag.toUpperCase();
@@ -31,7 +58,7 @@ function Admin() {
     if (!loading && (!user || !isAdmin)) nav({ to: "/perfil" });
   }, [loading, user, isAdmin, nav]);
 
-  const [tab, setTab] = useState<"products" | "orders" | "support">("products");
+  const [tab, setTab] = useState<"products" | "orders" | "support" | "logs">("products");
 
   if (!isAdmin) return null;
 
@@ -47,6 +74,7 @@ function Admin() {
           { id: "products", label: "Produtos", icon: Boxes },
           { id: "orders", label: "Pedidos", icon: Package },
           { id: "support", label: "Suporte", icon: LifeBuoy },
+          { id: "logs", label: "Logs", icon: History },
         ] as const).map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 px-5 py-3 font-bold text-sm border-b-2 transition ${
@@ -60,12 +88,14 @@ function Admin() {
       {tab === "products" && <ProductsPanel />}
       {tab === "orders" && <OrdersPanel />}
       {tab === "support" && <SupportPanel />}
+      {tab === "logs" && <LogsPanel />}
     </main>
   );
 }
 
 function ProductsPanel() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const { data: products = [] } = useQuery({
     queryKey: ["products", "all"],
     queryFn: async () => {
@@ -82,8 +112,22 @@ function ProductsPanel() {
 
   const del = async (id: string) => {
     if (!confirm("Excluir produto?")) return;
+    const target = products.find((p) => p.id === id);
     const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Excluído"); refresh(); }
+    if (error) toast.error(error.message);
+    else {
+      if (user && target) {
+        await logAudit({
+          actor_user_id: user.id,
+          actor_email: user.email ?? null,
+          product_id: id,
+          product_name: target.name,
+          action: "delete",
+          changes: { color: target.color },
+        });
+      }
+      toast.success("Excluído"); refresh();
+    }
   };
 
   return (
@@ -489,6 +533,7 @@ function OrderEditModal({ order, onClose, onSaved }: { order: any; onClose: () =
 function ProductModal({ product, onClose, onSaved }: {
   product: Product | null; onClose: () => void; onSaved: () => void;
 }) {
+  const { user } = useAuth();
   const [form, setForm] = useState({
     name: product?.name ?? "",
     category: product?.category ?? "Moletom",
@@ -529,7 +574,19 @@ function ProductModal({ product, onClose, onSaved }: {
       : await supabase.from("products").insert(payload as never);
     setLoading(false);
     if (error) toast.error(error.message);
-    else { toast.success("Salvo!"); onSaved(); }
+    else {
+      if (user) {
+        await logAudit({
+          actor_user_id: user.id,
+          actor_email: user.email ?? null,
+          product_id: product?.id ?? null,
+          product_name: payload.name,
+          action: product ? "update" : "create",
+          changes: product ? diffFields(product, payload) : { created: payload },
+        });
+      }
+      toast.success("Salvo!"); onSaved();
+    }
   };
 
   return (
@@ -665,11 +722,13 @@ function VariantsQuickEditor({ products, onChange }: { products: Product[]; onCh
 }
 
 function VariantsList({ variants, onChange }: { variants: ProductVariant[]; onChange: () => void }) {
+  const { user } = useAuth();
   const [rows, setRows] = useState(() =>
     variants.map((v) => ({
       id: v.id,
       color: v.color,
       color_hex: (v as any).color_hex ?? "#000000",
+      image_url: v.image_url,
     }))
   );
   const [busy, setBusy] = useState(false);
@@ -680,10 +739,11 @@ function VariantsList({ variants, onChange }: { variants: ProductVariant[]; onCh
       id: v.id,
       color: v.color,
       color_hex: (v as any).color_hex ?? "#000000",
+      image_url: v.image_url,
     })));
   }, [variants]);
 
-  const update = (id: string, patch: Partial<{ color: string; color_hex: string }>) =>
+  const update = (id: string, patch: Partial<{ color: string; color_hex: string; image_url: string }>) =>
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
   const saveAll = async () => {
@@ -691,14 +751,25 @@ function VariantsList({ variants, onChange }: { variants: ProductVariant[]; onCh
     for (const r of rows) {
       const orig = variants.find((v) => v.id === r.id);
       if (!orig) continue;
-      if (orig.color === r.color && ((orig as any).color_hex ?? null) === r.color_hex) continue;
+      const changes = diffFields(orig, r);
+      if (Object.keys(changes).length === 0) continue;
       const { error } = await supabase.from("products")
-        .update({ color: r.color, color_hex: r.color_hex } as never)
+        .update({ color: r.color, color_hex: r.color_hex, image_url: r.image_url } as never)
         .eq("id", r.id);
       if (error) { setBusy(false); toast.error(error.message); return; }
+      if (user) {
+        await logAudit({
+          actor_user_id: user.id,
+          actor_email: user.email ?? null,
+          product_id: r.id,
+          product_name: orig.name,
+          action: "update",
+          changes,
+        });
+      }
     }
     setBusy(false);
-    toast.success("Cores atualizadas");
+    toast.success("Variantes atualizadas");
     onChange();
   };
 
@@ -739,7 +810,9 @@ function VariantsList({ variants, onChange }: { variants: ProductVariant[]; onCh
     <div className="border-t border-border p-4 space-y-3 bg-secondary/20">
       <div className="space-y-2">
         {rows.map((r) => (
-          <div key={r.id} className="flex items-center gap-2">
+          <div key={r.id} className="flex items-center gap-2 flex-wrap">
+            <img src={getProductImage(r.image_url)} alt={r.color}
+              className="h-12 w-12 rounded-lg object-cover bg-secondary border border-border" />
             <input type="color" value={r.color_hex}
               onChange={(e) => update(r.id, { color_hex: e.target.value })}
               className="h-9 w-12 rounded-lg cursor-pointer border border-border bg-secondary" />
@@ -749,7 +822,8 @@ function VariantsList({ variants, onChange }: { variants: ProductVariant[]; onCh
             <input value={r.color}
               onChange={(e) => update(r.id, { color: e.target.value })}
               placeholder="Nome da cor"
-              className={`${inputCls} flex-1`} />
+              className={`${inputCls} flex-1 min-w-[140px]`} />
+            <VariantImagePicker value={r.image_url} onChange={(url) => update(r.id, { image_url: url })} />
             <button type="button" onClick={() => removeVariant(r.id)} disabled={busy}
               title="Remover variante"
               className="p-2 rounded-lg bg-secondary hover:bg-destructive hover:text-destructive-foreground transition disabled:opacity-50">
@@ -761,7 +835,7 @@ function VariantsList({ variants, onChange }: { variants: ProductVariant[]; onCh
       <div className="flex flex-wrap gap-2 pt-2">
         <button type="button" onClick={saveAll} disabled={busy}
           className="inline-flex items-center gap-2 rounded-lg bg-accent text-accent-foreground font-bold px-4 py-2 text-sm hover:opacity-90 transition disabled:opacity-50">
-          <Save className="h-4 w-4" /> Salvar cores
+          <Save className="h-4 w-4" /> Salvar variantes
         </button>
         <button type="button" onClick={addVariant} disabled={busy}
           className="inline-flex items-center gap-2 rounded-lg bg-secondary font-bold px-4 py-2 text-sm hover:bg-muted transition disabled:opacity-50">
@@ -769,6 +843,99 @@ function VariantsList({ variants, onChange }: { variants: ProductVariant[]; onCh
         </button>
       </div>
     </div>
+  );
+}
+
+function VariantImagePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+      onChange(data.publicUrl);
+      toast.success("Imagem enviada");
+    } catch (err: any) {
+      toast.error(err.message ?? "Falha ao enviar");
+    } finally { setUploading(false); }
+  };
+  return (
+    <label className="inline-flex items-center gap-1 cursor-pointer rounded-lg bg-secondary px-2 py-1.5 hover:bg-muted text-xs font-semibold">
+      <Upload className="h-3.5 w-3.5" />
+      {uploading ? "Enviando…" : "Imagem"}
+      <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={uploading} />
+    </label>
+  );
+}
+
+function LogsPanel() {
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ["admin_audit_log"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("admin_audit_log" as never)
+        .select("*").order("created_at", { ascending: false }).limit(200);
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  return (
+    <section className="mt-8">
+      <h2 className="text-lg font-black flex items-center gap-2 mb-3">
+        <History className="h-5 w-5 text-accent" /> Logs de alterações
+      </h2>
+      <p className="text-xs text-muted-foreground mb-4">
+        Registro das alterações feitas no painel Admin (cor, preço, tamanhos, imagem etc.).
+      </p>
+      {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {!isLoading && logs.length === 0 && (
+        <p className="text-sm text-muted-foreground">Nenhuma alteração registrada ainda.</p>
+      )}
+      <div className="space-y-2">
+        {logs.map((l) => (
+          <div key={l.id} className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(l.created_at).toLocaleString("pt-BR")}
+                </p>
+                <p className="font-bold text-sm">
+                  {l.action === "create" ? "Criou" : l.action === "delete" ? "Excluiu" : "Editou"}
+                  {" "}
+                  <span className="text-accent">{l.product_name ?? "(produto)"}</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {l.actor_email ?? l.actor_user_id}
+                </p>
+              </div>
+            </div>
+            {l.changes && Object.keys(l.changes).length > 0 && (
+              <div className="mt-3 space-y-1 text-xs">
+                {Object.entries(l.changes).map(([field, val]: any) => (
+                  <div key={field} className="flex items-start gap-2">
+                    <span className="font-bold uppercase text-muted-foreground w-24 shrink-0">{field}</span>
+                    {val && typeof val === "object" && "old" in val ? (
+                      <span className="flex-1 break-all">
+                        <span className="text-rose-400 line-through">{JSON.stringify(val.old)}</span>
+                        {" → "}
+                        <span className="text-emerald-400">{JSON.stringify(val.new)}</span>
+                      </span>
+                    ) : (
+                      <span className="flex-1 break-all">{JSON.stringify(val)}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
