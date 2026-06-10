@@ -5,10 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProductCard, type Product } from "@/components/ProductCard";
 import logo from "@/assets/logo.png";
 import { ArrowRight } from "lucide-react";
+import { useProductsRealtime } from "@/hooks/useProductsRealtime";
 
 export const Route = createFileRoute("/")({ component: Index });
 
 function Index() {
+  useProductsRealtime();
   const { data: products = [] } = useQuery({
     queryKey: ["products", "featured"],
     queryFn: async () => {
