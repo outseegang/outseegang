@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { type Product } from "@/components/ProductCard";
 import { GroupedProductCard } from "@/components/GroupedProductCard";
+import { useProductsRealtime } from "@/hooks/useProductsRealtime";
 
 type Search = { q?: string; cat?: string };
 
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/catalogo")({
 });
 
 function Catalogo() {
+  useProductsRealtime();
   const { q: initQ, cat: initCat } = Route.useSearch();
   const [query, setQuery] = useState(initQ ?? "");
   const [cat, setCat] = useState(initCat ?? "Todos");
