@@ -707,11 +707,13 @@ function VariantsQuickEditor({ products, onChange }: { products: Product[]; onCh
 }
 
 function VariantsList({ variants, onChange }: { variants: ProductVariant[]; onChange: () => void }) {
+  const { user } = useAuth();
   const [rows, setRows] = useState(() =>
     variants.map((v) => ({
       id: v.id,
       color: v.color,
       color_hex: (v as any).color_hex ?? "#000000",
+      image_url: v.image_url,
     }))
   );
   const [busy, setBusy] = useState(false);
@@ -722,10 +724,11 @@ function VariantsList({ variants, onChange }: { variants: ProductVariant[]; onCh
       id: v.id,
       color: v.color,
       color_hex: (v as any).color_hex ?? "#000000",
+      image_url: v.image_url,
     })));
   }, [variants]);
 
-  const update = (id: string, patch: Partial<{ color: string; color_hex: string }>) =>
+  const update = (id: string, patch: Partial<{ color: string; color_hex: string; image_url: string }>) =>
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
   const saveAll = async () => {
@@ -733,14 +736,25 @@ function VariantsList({ variants, onChange }: { variants: ProductVariant[]; onCh
     for (const r of rows) {
       const orig = variants.find((v) => v.id === r.id);
       if (!orig) continue;
-      if (orig.color === r.color && ((orig as any).color_hex ?? null) === r.color_hex) continue;
+      const changes = diffFields(orig, r);
+      if (Object.keys(changes).length === 0) continue;
       const { error } = await supabase.from("products")
-        .update({ color: r.color, color_hex: r.color_hex } as never)
+        .update({ color: r.color, color_hex: r.color_hex, image_url: r.image_url } as never)
         .eq("id", r.id);
       if (error) { setBusy(false); toast.error(error.message); return; }
+      if (user) {
+        await logAudit({
+          actor_user_id: user.id,
+          actor_email: user.email ?? null,
+          product_id: r.id,
+          product_name: orig.name,
+          action: "update",
+          changes,
+        });
+      }
     }
     setBusy(false);
-    toast.success("Cores atualizadas");
+    toast.success("Variantes atualizadas");
     onChange();
   };
 
