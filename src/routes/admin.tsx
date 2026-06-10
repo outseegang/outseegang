@@ -95,6 +95,7 @@ function Admin() {
 
 function ProductsPanel() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const { data: products = [] } = useQuery({
     queryKey: ["products", "all"],
     queryFn: async () => {
@@ -111,8 +112,22 @@ function ProductsPanel() {
 
   const del = async (id: string) => {
     if (!confirm("Excluir produto?")) return;
+    const target = products.find((p) => p.id === id);
     const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Excluído"); refresh(); }
+    if (error) toast.error(error.message);
+    else {
+      if (user && target) {
+        await logAudit({
+          actor_user_id: user.id,
+          actor_email: user.email ?? null,
+          product_id: id,
+          product_name: target.name,
+          action: "delete",
+          changes: { color: target.color },
+        });
+      }
+      toast.success("Excluído"); refresh();
+    }
   };
 
   return (
