@@ -9,8 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PedidosRouteImport } from './routes/pedidos'
+import { Route as DropsRouteImport } from './routes/drops'
+import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as CarrinhoRouteImport } from './routes/carrinho'
@@ -19,6 +22,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProdutoIdRouteImport } from './routes/produto.$id'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 
+const SobreRoute = SobreRouteImport.update({
+  id: '/sobre',
+  path: '/sobre',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PerfilRoute = PerfilRouteImport.update({
   id: '/perfil',
   path: '/perfil',
@@ -27,6 +35,16 @@ const PerfilRoute = PerfilRouteImport.update({
 const PedidosRoute = PedidosRouteImport.update({
   id: '/pedidos',
   path: '/pedidos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DropsRoute = DropsRouteImport.update({
+  id: '/drops',
+  path: '/drops',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContatoRoute = ContatoRouteImport.update({
+  id: '/contato',
+  path: '/contato',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -71,8 +89,11 @@ export interface FileRoutesByFullPath {
   '/carrinho': typeof CarrinhoRoute
   '/catalogo': typeof CatalogoRoute
   '/checkout': typeof CheckoutRoute
+  '/contato': typeof ContatoRoute
+  '/drops': typeof DropsRoute
   '/pedidos': typeof PedidosRoute
   '/perfil': typeof PerfilRoute
+  '/sobre': typeof SobreRoute
   '/api/chat': typeof ApiChatRoute
   '/produto/$id': typeof ProdutoIdRoute
 }
@@ -82,8 +103,11 @@ export interface FileRoutesByTo {
   '/carrinho': typeof CarrinhoRoute
   '/catalogo': typeof CatalogoRoute
   '/checkout': typeof CheckoutRoute
+  '/contato': typeof ContatoRoute
+  '/drops': typeof DropsRoute
   '/pedidos': typeof PedidosRoute
   '/perfil': typeof PerfilRoute
+  '/sobre': typeof SobreRoute
   '/api/chat': typeof ApiChatRoute
   '/produto/$id': typeof ProdutoIdRoute
 }
@@ -94,8 +118,11 @@ export interface FileRoutesById {
   '/carrinho': typeof CarrinhoRoute
   '/catalogo': typeof CatalogoRoute
   '/checkout': typeof CheckoutRoute
+  '/contato': typeof ContatoRoute
+  '/drops': typeof DropsRoute
   '/pedidos': typeof PedidosRoute
   '/perfil': typeof PerfilRoute
+  '/sobre': typeof SobreRoute
   '/api/chat': typeof ApiChatRoute
   '/produto/$id': typeof ProdutoIdRoute
 }
@@ -107,8 +134,11 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/catalogo'
     | '/checkout'
+    | '/contato'
+    | '/drops'
     | '/pedidos'
     | '/perfil'
+    | '/sobre'
     | '/api/chat'
     | '/produto/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -118,8 +148,11 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/catalogo'
     | '/checkout'
+    | '/contato'
+    | '/drops'
     | '/pedidos'
     | '/perfil'
+    | '/sobre'
     | '/api/chat'
     | '/produto/$id'
   id:
@@ -129,8 +162,11 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/catalogo'
     | '/checkout'
+    | '/contato'
+    | '/drops'
     | '/pedidos'
     | '/perfil'
+    | '/sobre'
     | '/api/chat'
     | '/produto/$id'
   fileRoutesById: FileRoutesById
@@ -141,14 +177,24 @@ export interface RootRouteChildren {
   CarrinhoRoute: typeof CarrinhoRoute
   CatalogoRoute: typeof CatalogoRoute
   CheckoutRoute: typeof CheckoutRoute
+  ContatoRoute: typeof ContatoRoute
+  DropsRoute: typeof DropsRoute
   PedidosRoute: typeof PedidosRoute
   PerfilRoute: typeof PerfilRoute
+  SobreRoute: typeof SobreRoute
   ApiChatRoute: typeof ApiChatRoute
   ProdutoIdRoute: typeof ProdutoIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sobre': {
+      id: '/sobre'
+      path: '/sobre'
+      fullPath: '/sobre'
+      preLoaderRoute: typeof SobreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/perfil': {
       id: '/perfil'
       path: '/perfil'
@@ -161,6 +207,20 @@ declare module '@tanstack/react-router' {
       path: '/pedidos'
       fullPath: '/pedidos'
       preLoaderRoute: typeof PedidosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/drops': {
+      id: '/drops'
+      path: '/drops'
+      fullPath: '/drops'
+      preLoaderRoute: typeof DropsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contato': {
+      id: '/contato'
+      path: '/contato'
+      fullPath: '/contato'
+      preLoaderRoute: typeof ContatoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -221,8 +281,11 @@ const rootRouteChildren: RootRouteChildren = {
   CarrinhoRoute: CarrinhoRoute,
   CatalogoRoute: CatalogoRoute,
   CheckoutRoute: CheckoutRoute,
+  ContatoRoute: ContatoRoute,
+  DropsRoute: DropsRoute,
   PedidosRoute: PedidosRoute,
   PerfilRoute: PerfilRoute,
+  SobreRoute: SobreRoute,
   ApiChatRoute: ApiChatRoute,
   ProdutoIdRoute: ProdutoIdRoute,
 }

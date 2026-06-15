@@ -13,6 +13,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { Header } from "@/components/Header";
 import { ChatBot } from "@/components/ChatBot";
+import { SocialProof } from "@/components/SocialProof";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -90,6 +91,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/617dc557-e380-41b1-821d-06cb955240a9" },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo+Black&family=Inter:wght@300;400;500;600;700;800;900&display=swap" },
       {
         rel: "stylesheet",
         href: appCss,
@@ -126,6 +130,7 @@ function RootComponent() {
           <Header />
           <Outlet />
           <ChatBot />
+          <SocialProof />
           <Toaster />
         </CartProvider>
       </AuthProvider>
