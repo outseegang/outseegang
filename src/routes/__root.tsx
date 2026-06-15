@@ -13,6 +13,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { Header } from "@/components/Header";
 import { ChatBot } from "@/components/ChatBot";
+import { SocialProof } from "@/components/SocialProof";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -129,6 +130,7 @@ function RootComponent() {
           <Header />
           <Outlet />
           <ChatBot />
+          <SocialProof />
           <Toaster />
         </CartProvider>
       </AuthProvider>
