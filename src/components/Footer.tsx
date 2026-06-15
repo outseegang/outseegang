@@ -1,8 +1,26 @@
 import { Link } from "@tanstack/react-router";
-import { Instagram, Twitter, Youtube, Mail, ArrowRight } from "lucide-react";
+import { Mail, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
+
+const IconInstagram = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="2" y="2" width="20" height="20" rx="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+  </svg>
+);
+const IconTwitter = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+const IconTikTok = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V8.6a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.84-.03z" />
+  </svg>
+);
 
 export function Footer() {
   const [email, setEmail] = useState("");
@@ -28,15 +46,16 @@ export function Footer() {
             </p>
             <div className="mt-6 flex gap-2">
               {[
-                { Icon: Instagram, href: "https://instagram.com" },
-                { Icon: Twitter, href: "https://twitter.com" },
-                { Icon: Youtube, href: "https://youtube.com" },
-              ].map(({ Icon, href }, i) => (
+                { Icon: IconInstagram, href: "https://instagram.com", label: "Instagram" },
+                { Icon: IconTikTok, href: "https://tiktok.com", label: "TikTok" },
+                { Icon: IconTwitter, href: "https://twitter.com", label: "X" },
+              ].map(({ Icon, href, label }, i) => (
                 <a
                   key={i}
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={label}
                   className="grid h-10 w-10 place-items-center rounded-full bg-white/5 border border-white/10 hover:bg-white hover:text-black transition-colors"
                 >
                   <Icon className="h-4 w-4" />
