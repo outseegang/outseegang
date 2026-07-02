@@ -14,6 +14,7 @@ import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as DropsRouteImport } from './routes/drops'
 import { Route as ContatoRouteImport } from './routes/contato'
+import { Route as ColecaoRouteImport } from './routes/colecao'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as CarrinhoRouteImport } from './routes/carrinho'
@@ -45,6 +46,11 @@ const DropsRoute = DropsRouteImport.update({
 const ContatoRoute = ContatoRouteImport.update({
   id: '/contato',
   path: '/contato',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ColecaoRoute = ColecaoRouteImport.update({
+  id: '/colecao',
+  path: '/colecao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/carrinho': typeof CarrinhoRoute
   '/catalogo': typeof CatalogoRoute
   '/checkout': typeof CheckoutRoute
+  '/colecao': typeof ColecaoRoute
   '/contato': typeof ContatoRoute
   '/drops': typeof DropsRoute
   '/pedidos': typeof PedidosRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/carrinho': typeof CarrinhoRoute
   '/catalogo': typeof CatalogoRoute
   '/checkout': typeof CheckoutRoute
+  '/colecao': typeof ColecaoRoute
   '/contato': typeof ContatoRoute
   '/drops': typeof DropsRoute
   '/pedidos': typeof PedidosRoute
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/carrinho': typeof CarrinhoRoute
   '/catalogo': typeof CatalogoRoute
   '/checkout': typeof CheckoutRoute
+  '/colecao': typeof ColecaoRoute
   '/contato': typeof ContatoRoute
   '/drops': typeof DropsRoute
   '/pedidos': typeof PedidosRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/catalogo'
     | '/checkout'
+    | '/colecao'
     | '/contato'
     | '/drops'
     | '/pedidos'
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/catalogo'
     | '/checkout'
+    | '/colecao'
     | '/contato'
     | '/drops'
     | '/pedidos'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/catalogo'
     | '/checkout'
+    | '/colecao'
     | '/contato'
     | '/drops'
     | '/pedidos'
@@ -177,6 +189,7 @@ export interface RootRouteChildren {
   CarrinhoRoute: typeof CarrinhoRoute
   CatalogoRoute: typeof CatalogoRoute
   CheckoutRoute: typeof CheckoutRoute
+  ColecaoRoute: typeof ColecaoRoute
   ContatoRoute: typeof ContatoRoute
   DropsRoute: typeof DropsRoute
   PedidosRoute: typeof PedidosRoute
@@ -221,6 +234,13 @@ declare module '@tanstack/react-router' {
       path: '/contato'
       fullPath: '/contato'
       preLoaderRoute: typeof ContatoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/colecao': {
+      id: '/colecao'
+      path: '/colecao'
+      fullPath: '/colecao'
+      preLoaderRoute: typeof ColecaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -281,6 +301,7 @@ const rootRouteChildren: RootRouteChildren = {
   CarrinhoRoute: CarrinhoRoute,
   CatalogoRoute: CatalogoRoute,
   CheckoutRoute: CheckoutRoute,
+  ColecaoRoute: ColecaoRoute,
   ContatoRoute: ContatoRoute,
   DropsRoute: DropsRoute,
   PedidosRoute: PedidosRoute,
@@ -292,3 +313,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
