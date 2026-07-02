@@ -21,6 +21,7 @@ import { Route as CarrinhoRouteImport } from './routes/carrinho'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProdutoIdRouteImport } from './routes/produto.$id'
+import { Route as ApiInstagramRouteImport } from './routes/api/instagram'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 
 const SobreRoute = SobreRouteImport.update({
@@ -83,6 +84,11 @@ const ProdutoIdRoute = ProdutoIdRouteImport.update({
   path: '/produto/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInstagramRoute = ApiInstagramRouteImport.update({
+  id: '/api/instagram',
+  path: '/api/instagram',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/perfil': typeof PerfilRoute
   '/sobre': typeof SobreRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/instagram': typeof ApiInstagramRoute
   '/produto/$id': typeof ProdutoIdRoute
 }
 export interface FileRoutesByTo {
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/perfil': typeof PerfilRoute
   '/sobre': typeof SobreRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/instagram': typeof ApiInstagramRoute
   '/produto/$id': typeof ProdutoIdRoute
 }
 export interface FileRoutesById {
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/perfil': typeof PerfilRoute
   '/sobre': typeof SobreRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/instagram': typeof ApiInstagramRoute
   '/produto/$id': typeof ProdutoIdRoute
 }
 export interface FileRouteTypes {
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/sobre'
     | '/api/chat'
+    | '/api/instagram'
     | '/produto/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/sobre'
     | '/api/chat'
+    | '/api/instagram'
     | '/produto/$id'
   id:
     | '__root__'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/sobre'
     | '/api/chat'
+    | '/api/instagram'
     | '/produto/$id'
   fileRoutesById: FileRoutesById
 }
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   PerfilRoute: typeof PerfilRoute
   SobreRoute: typeof SobreRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiInstagramRoute: typeof ApiInstagramRoute
   ProdutoIdRoute: typeof ProdutoIdRoute
 }
 
@@ -285,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProdutoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/instagram': {
+      id: '/api/instagram'
+      path: '/api/instagram'
+      fullPath: '/api/instagram'
+      preLoaderRoute: typeof ApiInstagramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -308,8 +328,19 @@ const rootRouteChildren: RootRouteChildren = {
   PerfilRoute: PerfilRoute,
   SobreRoute: SobreRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiInstagramRoute: ApiInstagramRoute,
   ProdutoIdRoute: ProdutoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
