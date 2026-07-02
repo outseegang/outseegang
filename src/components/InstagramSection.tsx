@@ -1,5 +1,15 @@
 import { motion } from "framer-motion";
-import { ArrowUpRight, Instagram } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+
+function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
 import { useEffect, useState } from "react";
 
 const HANDLE = (import.meta.env.VITE_INSTAGRAM_HANDLE as string | undefined)?.replace(/^@/, "") || "outseegang";
@@ -54,7 +64,7 @@ export function InstagramSection() {
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-wider border-b border-white/40 hover:border-white pb-1"
         >
-          <Instagram className="h-4 w-4" /> @{HANDLE} <ArrowUpRight className="h-4 w-4" />
+          <InstagramIcon className="h-4 w-4" /> @{HANDLE} <ArrowUpRight className="h-4 w-4" />
         </a>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
@@ -77,7 +87,7 @@ export function InstagramSection() {
               className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors duration-300 grid place-items-center">
-              <Instagram className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <InstagramIcon className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </a>
         ))}
