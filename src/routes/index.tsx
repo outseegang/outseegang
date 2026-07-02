@@ -8,6 +8,7 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { useProductsRealtime } from "@/hooks/useProductsRealtime";
 import { AuthorityBar } from "@/components/AuthorityBar";
 import { Footer } from "@/components/Footer";
+import { InstagramSection } from "@/components/InstagramSection";
 
 export const Route = createFileRoute("/")({ component: Index });
 
