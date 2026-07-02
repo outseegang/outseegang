@@ -8,6 +8,7 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { useProductsRealtime } from "@/hooks/useProductsRealtime";
 import { AuthorityBar } from "@/components/AuthorityBar";
 import { Footer } from "@/components/Footer";
+import { InstagramSection } from "@/components/InstagramSection";
 
 export const Route = createFileRoute("/")({ component: Index });
 
@@ -154,119 +155,8 @@ function Index() {
         </div>
       </section>
 
-      {/* MAIS QUE ROUPA */}
-      <section className="relative overflow-hidden border-y border-white/10 bg-[var(--gradient-drop)]">
-        <div className="mx-auto max-w-7xl px-4 py-24 md:py-32 grid md:grid-cols-12 gap-10 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="md:col-span-5"
-          >
-            <p className="text-xs uppercase tracking-[0.3em] text-white/40 mb-4">— Manifesto</p>
-            <h2 className="font-display text-6xl md:text-8xl uppercase leading-[0.88]">
-              Mais que<br />roupa.
-            </h2>
-            <p className="mt-8 text-white/70 text-lg leading-relaxed max-w-md">
-              Cada peça carrega uma postura. Liberdade, autenticidade e a coragem de não pertencer a lugar nenhum — exceto à própria rua.
-            </p>
-            <div className="mt-10 space-y-3">
-              {[
-                "Tecidos premium pensados para durar.",
-                "Cortes que não pedem licença.",
-                "Edições limitadas. Nunca repetidas.",
-              ].map((line) => (
-                <p key={line} className="flex items-start gap-3 text-sm text-white/80">
-                  <span className="mt-1.5 h-1 w-6 bg-white/60 shrink-0" />
-                  {line}
-                </p>
-              ))}
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.9 }}
-            className="md:col-span-7 grid grid-cols-6 gap-3 md:gap-4"
-          >
-            <div className="col-span-4 row-span-2 aspect-[4/5] bg-zinc-800 rounded-2xl overflow-hidden relative group">
-              <img
-                src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=900&q=80"
-                alt="Outsee lifestyle 1"
-                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent" />
-              <p className="absolute bottom-4 left-4 font-display text-2xl uppercase">"Não é um look. É uma postura."</p>
-            </div>
-            <div className="col-span-2 aspect-square bg-zinc-800 rounded-2xl overflow-hidden group">
-              <img
-                src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&q=80"
-                alt="Outsee lifestyle 2"
-                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-700"
-              />
-            </div>
-            <div className="col-span-2 aspect-square bg-zinc-800 rounded-2xl overflow-hidden group">
-              <img
-                src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&q=80"
-                alt="Outsee lifestyle 3"
-                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-700"
-              />
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
       {/* OUTSEE NA RUA */}
-      <section className="mx-auto max-w-7xl px-4 py-24">
-        <div className="flex items-end justify-between mb-12 gap-4 flex-wrap">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-white/40 mb-3">— Comunidade</p>
-            <h2 className="font-display text-5xl md:text-7xl uppercase leading-none">Outsee na rua</h2>
-          </div>
-          <a
-            href="https://instagram.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-wider border-b border-white/40 hover:border-white pb-1"
-          >
-            @outsee <ArrowUpRight className="h-4 w-4" />
-          </a>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
-          {[
-            "photo-1539109136881-3be0616acf4b",
-            "photo-1552374196-1ab2a1c593e8",
-            "photo-1492447166138-50c3889fccb1",
-            "photo-1488161628813-04466f872be2",
-            "photo-1503342217505-b0a15ec3261c",
-            "photo-1519408469771-2586093c3f14",
-          ].map((id, i) => (
-            <a
-              key={id}
-              href="https://instagram.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative aspect-square overflow-hidden bg-zinc-900 rounded-xl"
-            >
-              <motion.img
-                initial={{ opacity: 0, scale: 1.05 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05, duration: 0.5 }}
-                src={`https://images.unsplash.com/${id}?w=500&q=80`}
-                alt={`Comunidade Outsee ${i + 1}`}
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors duration-300 grid place-items-center">
-                <ArrowUpRight className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </a>
-          ))}
-        </div>
-      </section>
+      <InstagramSection />
 
       {/* CLOSING CTA */}
       <section className="relative overflow-hidden border-t border-white/10">

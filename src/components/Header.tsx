@@ -42,7 +42,7 @@ export function Header() {
         </Link>
         <nav className="hidden lg:flex items-center justify-center gap-8 min-w-0">
           <Link to="/" className={navLinkClass} activeOptions={{ exact: true }} activeProps={{ className: "text-foreground" }}>Home</Link>
-          <Link to="/catalogo" className={navLinkClass} activeProps={{ className: "text-foreground" }}>Coleção</Link>
+          <Link to="/colecao" className={navLinkClass} activeProps={{ className: "text-foreground" }}>Coleção</Link>
           <Link to="/drops" className={navLinkClass} activeProps={{ className: "text-foreground" }}>Drops</Link>
           <Link to="/sobre" className={navLinkClass} activeProps={{ className: "text-foreground" }}>Sobre a Outsee</Link>
           <Link to="/contato" className={navLinkClass} activeProps={{ className: "text-foreground" }}>Contato</Link>

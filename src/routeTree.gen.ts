@@ -14,12 +14,14 @@ import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as DropsRouteImport } from './routes/drops'
 import { Route as ContatoRouteImport } from './routes/contato'
+import { Route as ColecaoRouteImport } from './routes/colecao'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as CarrinhoRouteImport } from './routes/carrinho'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProdutoIdRouteImport } from './routes/produto.$id'
+import { Route as ApiInstagramRouteImport } from './routes/api/instagram'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 
 const SobreRoute = SobreRouteImport.update({
@@ -45,6 +47,11 @@ const DropsRoute = DropsRouteImport.update({
 const ContatoRoute = ContatoRouteImport.update({
   id: '/contato',
   path: '/contato',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ColecaoRoute = ColecaoRouteImport.update({
+  id: '/colecao',
+  path: '/colecao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -77,6 +84,11 @@ const ProdutoIdRoute = ProdutoIdRouteImport.update({
   path: '/produto/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInstagramRoute = ApiInstagramRouteImport.update({
+  id: '/api/instagram',
+  path: '/api/instagram',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -89,12 +101,14 @@ export interface FileRoutesByFullPath {
   '/carrinho': typeof CarrinhoRoute
   '/catalogo': typeof CatalogoRoute
   '/checkout': typeof CheckoutRoute
+  '/colecao': typeof ColecaoRoute
   '/contato': typeof ContatoRoute
   '/drops': typeof DropsRoute
   '/pedidos': typeof PedidosRoute
   '/perfil': typeof PerfilRoute
   '/sobre': typeof SobreRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/instagram': typeof ApiInstagramRoute
   '/produto/$id': typeof ProdutoIdRoute
 }
 export interface FileRoutesByTo {
@@ -103,12 +117,14 @@ export interface FileRoutesByTo {
   '/carrinho': typeof CarrinhoRoute
   '/catalogo': typeof CatalogoRoute
   '/checkout': typeof CheckoutRoute
+  '/colecao': typeof ColecaoRoute
   '/contato': typeof ContatoRoute
   '/drops': typeof DropsRoute
   '/pedidos': typeof PedidosRoute
   '/perfil': typeof PerfilRoute
   '/sobre': typeof SobreRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/instagram': typeof ApiInstagramRoute
   '/produto/$id': typeof ProdutoIdRoute
 }
 export interface FileRoutesById {
@@ -118,12 +134,14 @@ export interface FileRoutesById {
   '/carrinho': typeof CarrinhoRoute
   '/catalogo': typeof CatalogoRoute
   '/checkout': typeof CheckoutRoute
+  '/colecao': typeof ColecaoRoute
   '/contato': typeof ContatoRoute
   '/drops': typeof DropsRoute
   '/pedidos': typeof PedidosRoute
   '/perfil': typeof PerfilRoute
   '/sobre': typeof SobreRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/instagram': typeof ApiInstagramRoute
   '/produto/$id': typeof ProdutoIdRoute
 }
 export interface FileRouteTypes {
@@ -134,12 +152,14 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/catalogo'
     | '/checkout'
+    | '/colecao'
     | '/contato'
     | '/drops'
     | '/pedidos'
     | '/perfil'
     | '/sobre'
     | '/api/chat'
+    | '/api/instagram'
     | '/produto/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -148,12 +168,14 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/catalogo'
     | '/checkout'
+    | '/colecao'
     | '/contato'
     | '/drops'
     | '/pedidos'
     | '/perfil'
     | '/sobre'
     | '/api/chat'
+    | '/api/instagram'
     | '/produto/$id'
   id:
     | '__root__'
@@ -162,12 +184,14 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/catalogo'
     | '/checkout'
+    | '/colecao'
     | '/contato'
     | '/drops'
     | '/pedidos'
     | '/perfil'
     | '/sobre'
     | '/api/chat'
+    | '/api/instagram'
     | '/produto/$id'
   fileRoutesById: FileRoutesById
 }
@@ -177,12 +201,14 @@ export interface RootRouteChildren {
   CarrinhoRoute: typeof CarrinhoRoute
   CatalogoRoute: typeof CatalogoRoute
   CheckoutRoute: typeof CheckoutRoute
+  ColecaoRoute: typeof ColecaoRoute
   ContatoRoute: typeof ContatoRoute
   DropsRoute: typeof DropsRoute
   PedidosRoute: typeof PedidosRoute
   PerfilRoute: typeof PerfilRoute
   SobreRoute: typeof SobreRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiInstagramRoute: typeof ApiInstagramRoute
   ProdutoIdRoute: typeof ProdutoIdRoute
 }
 
@@ -221,6 +247,13 @@ declare module '@tanstack/react-router' {
       path: '/contato'
       fullPath: '/contato'
       preLoaderRoute: typeof ContatoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/colecao': {
+      id: '/colecao'
+      path: '/colecao'
+      fullPath: '/colecao'
+      preLoaderRoute: typeof ColecaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -265,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProdutoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/instagram': {
+      id: '/api/instagram'
+      path: '/api/instagram'
+      fullPath: '/api/instagram'
+      preLoaderRoute: typeof ApiInstagramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -281,12 +321,14 @@ const rootRouteChildren: RootRouteChildren = {
   CarrinhoRoute: CarrinhoRoute,
   CatalogoRoute: CatalogoRoute,
   CheckoutRoute: CheckoutRoute,
+  ColecaoRoute: ColecaoRoute,
   ContatoRoute: ContatoRoute,
   DropsRoute: DropsRoute,
   PedidosRoute: PedidosRoute,
   PerfilRoute: PerfilRoute,
   SobreRoute: SobreRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiInstagramRoute: ApiInstagramRoute,
   ProdutoIdRoute: ProdutoIdRoute,
 }
 export const routeTree = rootRouteImport
