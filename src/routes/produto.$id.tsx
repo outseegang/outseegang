@@ -31,6 +31,22 @@ const sizeChart: Record<string, { chest: string; length: string; sleeve: string 
   XGG: { chest: "124 cm", length: "76 cm", sleeve: "70 cm" },
 };
 
+// Tabela de numeração de calçados (BR → CM do pé interno)
+const footwearChart: Record<string, { cm: string; eu: string; us: string }> = {
+  "34": { cm: "22.0 cm", eu: "35", us: "4" },
+  "35": { cm: "22.5 cm", eu: "36", us: "5" },
+  "36": { cm: "23.0 cm", eu: "37", us: "6" },
+  "37": { cm: "23.5 cm", eu: "38", us: "6.5" },
+  "38": { cm: "24.0 cm", eu: "39", us: "7" },
+  "39": { cm: "25.0 cm", eu: "40", us: "8" },
+  "40": { cm: "25.5 cm", eu: "41", us: "8.5" },
+  "41": { cm: "26.5 cm", eu: "42", us: "9" },
+  "42": { cm: "27.0 cm", eu: "43", us: "10" },
+  "43": { cm: "28.0 cm", eu: "44", us: "10.5" },
+  "44": { cm: "28.5 cm", eu: "45", us: "11" },
+  "45": { cm: "29.5 cm", eu: "46", us: "12" },
+};
+
 function ProductDetail() {
   useProductsRealtime();
   const { id } = Route.useParams();
@@ -58,6 +74,8 @@ function ProductDetail() {
   const mainImg = getProductImage(p.image_url);
   const gallery = [mainImg, mainImg, mainImg, mainImg];
   const lowStock = p.stock > 0 && p.stock <= 5;
+  const isFootwear = /t[êe]nis|sneaker|cal[çc]ado/i.test(p.category) || /t[êe]nis/i.test(p.name);
+  const outOfStock = p.stock <= 0;
 
   const addToCart = () => {
     if (!size) {
@@ -71,7 +89,7 @@ function ProductDetail() {
       size,
       price: Number(p.price),
       image_url: p.image_url,
-      quantity: qty,
+      quantity: Math.min(qty, p.stock),
     });
     toast.success("Adicionado à sacola");
   };
@@ -88,7 +106,7 @@ function ProductDetail() {
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-10">
         <Link
-          to="/catalogo"
+          to="/colecao"
           className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-white/50 hover:text-white mb-8"
         >
           <ArrowLeft className="h-4 w-4" /> Voltar à coleção
@@ -131,9 +149,14 @@ function ProductDetail() {
               <div className="absolute top-3 right-3 grid h-9 w-9 place-items-center rounded-full bg-black/60 backdrop-blur border border-white/10">
                 <ZoomIn className="h-4 w-4" />
               </div>
-              {lowStock && (
+              {lowStock && !outOfStock && (
                 <div className="absolute top-3 left-3 inline-flex items-center gap-2 rounded-full bg-amber-500 text-black text-[10px] font-black uppercase tracking-wider px-3 py-1.5">
                   <Flame className="h-3 w-3" /> Últimas {p.stock} unidades
+                </div>
+              )}
+              {outOfStock && (
+                <div className="absolute top-3 left-3 inline-flex items-center gap-2 rounded-full bg-white text-black text-[10px] font-black uppercase tracking-wider px-3 py-1.5">
+                  Esgotado
                 </div>
               )}
             </motion.div>
@@ -199,6 +222,33 @@ function ProductDetail() {
                   animate={{ opacity: 1, height: "auto" }}
                   className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]"
                 >
+                  {isFootwear ? (
+                    <table className="w-full text-xs">
+                      <thead className="bg-white/5">
+                        <tr className="text-left text-white/50 uppercase tracking-wider">
+                          <th className="px-3 py-2">BR</th>
+                          <th className="px-3 py-2">Pé (cm)</th>
+                          <th className="px-3 py-2">EU</th>
+                          <th className="px-3 py-2">US</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {p.sizes.filter((s) => footwearChart[s]).map((s) => (
+                          <tr key={s} className="border-t border-white/5">
+                            <td className="px-3 py-2 font-bold">{s}</td>
+                            <td className="px-3 py-2 text-white/70">{footwearChart[s].cm}</td>
+                            <td className="px-3 py-2 text-white/70">{footwearChart[s].eu}</td>
+                            <td className="px-3 py-2 text-white/70">{footwearChart[s].us}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr><td colSpan={4} className="px-3 py-2 text-[10px] text-white/40">
+                          Meça o pé descalço no chão, do calcanhar ao maior dedo. Prefira o final do dia.
+                        </td></tr>
+                      </tfoot>
+                    </table>
+                  ) : (
                   <table className="w-full text-xs">
                     <thead className="bg-white/5">
                       <tr className="text-left text-white/50 uppercase tracking-wider">
@@ -221,13 +271,19 @@ function ProductDetail() {
                         ))}
                     </tbody>
                   </table>
+                  )}
                 </motion.div>
               )}
             </div>
 
             {/* QUANTIDADE */}
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wider">Quantidade</p>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider">Quantidade</p>
+                {p.stock > 0 && (
+                  <p className="text-[10px] text-white/50 mt-1">{p.stock} disponíveis</p>
+                )}
+              </div>
               <div className="inline-flex items-center rounded-full border border-white/15">
                 <button
                   onClick={() => setQty(Math.max(1, qty - 1))}
@@ -237,8 +293,9 @@ function ProductDetail() {
                 </button>
                 <span className="px-5 font-bold tabular-nums">{qty}</span>
                 <button
-                  onClick={() => setQty(qty + 1)}
-                  className="px-4 py-2 hover:bg-white/5"
+                  onClick={() => setQty(Math.min(p.stock || 1, qty + 1))}
+                  disabled={qty >= p.stock}
+                  className="px-4 py-2 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   +
                 </button>
@@ -249,9 +306,10 @@ function ProductDetail() {
             <div className="flex flex-col gap-3 pt-2">
               <button
                 onClick={addToCart}
-                className="group inline-flex items-center justify-center gap-3 rounded-full bg-white text-black font-bold uppercase tracking-wider text-sm py-4 hover:bg-white/90 transition-colors"
+                disabled={outOfStock}
+                className="group inline-flex items-center justify-center gap-3 rounded-full bg-white text-black font-bold uppercase tracking-wider text-sm py-4 hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <ShoppingBag className="h-4 w-4" /> Adicionar à sacola
+                <ShoppingBag className="h-4 w-4" /> {outOfStock ? "Esgotado" : "Adicionar à sacola"}
               </button>
               <button
                 onClick={() => {
@@ -262,7 +320,8 @@ function ProductDetail() {
                   addToCart();
                   nav({ to: "/checkout" });
                 }}
-                className="rounded-full border border-white/20 font-bold uppercase tracking-wider text-sm py-4 hover:bg-white/10 transition-colors"
+                disabled={outOfStock}
+                className="rounded-full border border-white/20 font-bold uppercase tracking-wider text-sm py-4 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Comprar agora
               </button>
