@@ -12,7 +12,7 @@ function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 import { useEffect, useState } from "react";
 
-const HANDLE = (import.meta.env.VITE_INSTAGRAM_HANDLE as string | undefined)?.replace(/^@/, "") || "outseegang";
+const HANDLE = (import.meta.env.VITE_INSTAGRAM_HANDLE as string | undefined)?.replace(/^@/, "") || "outsee_gang";
 const PROFILE_URL = `https://www.instagram.com/${HANDLE}/`;
 
 type Post = { id: string; permalink: string; media_url: string; caption?: string };
