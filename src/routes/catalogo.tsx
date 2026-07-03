@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { type Product } from "@/components/ProductCard";
 import { GroupedProductCard } from "@/components/GroupedProductCard";
 import { useProductsRealtime } from "@/hooks/useProductsRealtime";
+import { searchAndGroup } from "@/lib/catalog-filters";
 
 type Search = { q?: string; cat?: string };
 
@@ -32,25 +33,7 @@ function Catalogo() {
     },
   });
 
-  const filtered = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    return all.filter((p) => {
-      const matchCat = cat === "Todos" || p.category === cat;
-      const matchTerm = !term || `${p.name} ${p.color} ${p.category} ${p.description ?? ""}`.toLowerCase().includes(term);
-      return matchCat && matchTerm;
-    });
-  }, [all, query, cat]);
-
-  const grouped = useMemo(() => {
-    const map = new Map<string, Product[]>();
-    for (const p of filtered) {
-      const key = `${p.name}__${p.category}`;
-      const arr = map.get(key) ?? [];
-      arr.push(p);
-      map.set(key, arr);
-    }
-    return Array.from(map.values());
-  }, [filtered]);
+  const grouped = useMemo(() => searchAndGroup(all, query, cat), [all, query, cat]);
 
   const cats = ["Todos", ...Array.from(new Set(all.map((p) => p.category)))];
 
@@ -82,11 +65,21 @@ function Catalogo() {
       ) : grouped.length === 0 ? (
         <p className="text-center py-20 text-muted-foreground">Nenhum produto encontrado.</p>
       ) : (
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {grouped.map((variants, i) => (
-            <GroupedProductCard key={variants[0].id} variants={variants} index={i} />
-          ))}
-        </div>
+        <>
+          <p className="mt-6 text-xs uppercase tracking-[0.25em] text-muted-foreground">
+            {grouped.length} {grouped.length === 1 ? "modelo" : "modelos"}
+          </p>
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {grouped.map((g, i) => (
+              <GroupedProductCard
+                key={g.variants[0].id}
+                variants={g.variants}
+                index={i}
+                preferredColor={g.matchedColor}
+              />
+            ))}
+          </div>
+        </>
       )}
     </main>
   );
