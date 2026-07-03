@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Product } from "@/components/ProductCard";
+import { priceRange } from "@/lib/catalog-filters";
 
 function tagClass(t: string) {
   const u = t.toUpperCase();
@@ -85,6 +86,9 @@ export function GroupedProductCard({
   }, [selected, groupKey, variants]);
   const p = variants[selected];
   const totalStock = variants.reduce((s, v) => s + v.stock, 0);
+  const { min: minPrice, max: maxPrice } = priceRange(variants);
+  const uniformPrice = minPrice === maxPrice;
+  const fmt = (n: number) => `R$ ${n.toFixed(2).replace(".", ",")}`;
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -152,7 +156,16 @@ export function GroupedProductCard({
           </div>
           <div className="flex items-end justify-between">
             <p className="text-xl font-bold text-accent">
-              R$ {Number(p.price).toFixed(2).replace(".", ",")}
+              {uniformPrice ? (
+                fmt(Number(p.price))
+              ) : (
+                <>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mr-1">
+                    A partir de
+                  </span>
+                  {fmt(minPrice)}
+                </>
+              )}
             </p>
             <p className="text-xs text-muted-foreground">{totalStock} em estoque</p>
           </div>
