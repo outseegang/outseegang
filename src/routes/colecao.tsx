@@ -1,19 +1,23 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { Search as SearchIcon, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/components/ProductCard";
 import { GroupedProductCard } from "@/components/GroupedProductCard";
 import { useProductsRealtime } from "@/hooks/useProductsRealtime";
 import { Footer } from "@/components/Footer";
+import { searchAndGroup, paginate, pageCount } from "@/lib/catalog-filters";
 
-type Search = { cor?: string; cat?: string };
+type Search = { cor?: string; cat?: string; q?: string; pag?: number };
 
 export const Route = createFileRoute("/colecao")({
   validateSearch: (s: Record<string, unknown>): Search => ({
     cor: typeof s.cor === "string" ? s.cor : undefined,
     cat: typeof s.cat === "string" ? s.cat : undefined,
+    q: typeof s.q === "string" ? s.q : undefined,
+    pag: typeof s.pag === "number" ? s.pag : typeof s.pag === "string" ? Number(s.pag) || undefined : undefined,
   }),
   head: () => ({
     meta: [
@@ -39,33 +43,41 @@ function swatch(color: string, hex: string | null): string {
   return COLOR_MAP[color.trim().toLowerCase()] ?? "#999";
 }
 
-function Section({ title, subtitle, products, cor }: { title: string; subtitle: string; products: Product[]; cor?: string }) {
-  const groups = useMemo(() => {
-    const map = new Map<string, Product[]>();
-    for (const p of products) {
-      const key = `${p.name}`;
-      const arr = map.get(key) ?? [];
-      arr.push(p);
-      map.set(key, arr);
-    }
-    return Array.from(map.values());
-  }, [products]);
+type Grouped = { variants: Product[]; matchedColor?: string };
 
-  const filtered = cor
-    ? groups.filter((g) => g.some((v) => v.color.trim().toLowerCase() === cor.trim().toLowerCase()))
-    : groups;
+const PAGE_SIZE = 12;
 
-  if (filtered.length === 0) return null;
-
+function Section({
+  title,
+  subtitle,
+  groups,
+  preferred,
+}: {
+  title: string;
+  subtitle: string;
+  groups: Grouped[];
+  preferred?: string;
+}) {
+  if (groups.length === 0) return null;
   return (
     <section className="mb-24">
-      <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.3em] text-white/40 mb-3">— {subtitle}</p>
-        <h2 className="font-display text-5xl md:text-6xl uppercase leading-none">{title}</h2>
+      <div className="mb-8 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/40 mb-3">— {subtitle}</p>
+          <h2 className="font-display text-5xl md:text-6xl uppercase leading-none">{title}</h2>
+        </div>
+        <p className="text-xs uppercase tracking-[0.25em] text-white/40">
+          {groups.length} {groups.length === 1 ? "modelo" : "modelos"}
+        </p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-        {filtered.map((variants, i) => (
-          <GroupedProductCard key={variants[0].id} variants={variants} index={i} preferredColor={cor} />
+        {groups.map((g, i) => (
+          <GroupedProductCard
+            key={g.variants[0].id}
+            variants={g.variants}
+            index={i}
+            preferredColor={g.matchedColor ?? preferred}
+          />
         ))}
       </div>
     </section>
@@ -74,9 +86,11 @@ function Section({ title, subtitle, products, cor }: { title: string; subtitle: 
 
 function Colecao() {
   useProductsRealtime();
-  const { cor: initCor, cat: initCat } = Route.useSearch();
+  const { cor: initCor, cat: initCat, q: initQ, pag: initPag } = Route.useSearch();
   const [cor, setCor] = useState<string | undefined>(initCor);
   const [cat, setCat] = useState<string>(initCat ?? "Todos");
+  const [query, setQuery] = useState<string>(initQ ?? "");
+  const [page, setPage] = useState<number>(initPag && initPag > 0 ? initPag : 1);
 
   const { data: all = [], isLoading } = useQuery({
     queryKey: ["products", "all"],
@@ -96,13 +110,57 @@ function Colecao() {
     return Array.from(map.values());
   }, [all]);
 
-  const moletons = all.filter((p) => /moletom|moleton/i.test(p.category) || /moletom/i.test(p.name));
-  const tenis = all.filter((p) => /t[êe]nis|sneaker/i.test(p.category) || /t[êe]nis/i.test(p.name));
-  const outros = all.filter((p) => !moletons.includes(p) && !tenis.includes(p));
+  // Group + search em um passo só — evita reagrupar por seção.
+  const searched = useMemo<Grouped[]>(
+    () => searchAndGroup(all, query, "Todos"),
+    [all, query],
+  );
+
+  // Filtro por cor aplicado sobre grupos (mantém o card único).
+  const colorFiltered = useMemo<Grouped[]>(() => {
+    if (!cor) return searched;
+    const key = cor.trim().toLowerCase();
+    return searched.filter((g) => g.variants.some((v) => v.color.trim().toLowerCase() === key));
+  }, [searched, cor]);
+
+  // Divide em seções (moletons/tênis/outros) já agrupadas.
+  const buckets = useMemo(() => {
+    const isMoletom = (v: Product) => /moletom|moleton/i.test(v.category) || /moletom/i.test(v.name);
+    const isTenis = (v: Product) => /t[êe]nis|sneaker/i.test(v.category) || /t[êe]nis/i.test(v.name);
+    const m: Grouped[] = [];
+    const t: Grouped[] = [];
+    const o: Grouped[] = [];
+    for (const g of colorFiltered) {
+      if (g.variants.some(isMoletom)) m.push(g);
+      else if (g.variants.some(isTenis)) t.push(g);
+      else o.push(g);
+    }
+    return { moletons: m, tenis: t, outros: o };
+  }, [colorFiltered]);
 
   const showMoletons = cat === "Todos" || cat === "Moletons";
   const showTenis = cat === "Todos" || cat === "Tênis";
-  const showOutros = cat === "Todos" && outros.length > 0;
+  const showOutros = cat === "Todos" && buckets.outros.length > 0;
+
+  // Aplica paginação baseada em GRUPOS.
+  const activeGroups = useMemo<Grouped[]>(() => {
+    const parts: Grouped[] = [];
+    if (showMoletons) parts.push(...buckets.moletons);
+    if (showTenis) parts.push(...buckets.tenis);
+    if (showOutros) parts.push(...buckets.outros);
+    return parts;
+  }, [buckets, showMoletons, showTenis, showOutros]);
+
+  const totalGroups = activeGroups.length;
+  const totalPages = pageCount(totalGroups, PAGE_SIZE);
+  const currentPage = Math.min(page, totalPages);
+  const pagedIds = new Set(paginate(activeGroups, currentPage, PAGE_SIZE).map((g) => g.variants[0].id));
+  const takePage = (arr: Grouped[]) => arr.filter((g) => pagedIds.has(g.variants[0].id));
+
+  // Reset página quando filtros mudam.
+  useEffect(() => {
+    setPage(1);
+  }, [query, cor, cat]);
 
   return (
     <main className="min-h-screen bg-background">
@@ -116,6 +174,28 @@ function Colecao() {
             Moletons e tênis OUTSEE em todas as cores. Filtre para encontrar sua vibe.
           </p>
         </motion.div>
+
+        {/* Search */}
+        <div className="mb-6">
+          <div className="relative max-w-xl">
+            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar por nome, cor, SKU ou categoria…"
+              className="w-full rounded-full bg-white/5 border border-white/10 pl-11 pr-10 py-3 text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                aria-label="Limpar busca"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Category filter */}
         <div className="flex flex-wrap items-center gap-2 mb-6">
@@ -163,17 +243,82 @@ function Colecao() {
           </div>
         </div>
 
+        {!isLoading && totalGroups > 0 && (
+          <p className="text-xs uppercase tracking-[0.25em] text-white/40 mb-8">
+            {totalGroups} {totalGroups === 1 ? "modelo encontrado" : "modelos encontrados"}
+            {totalPages > 1 && ` · página ${currentPage} de ${totalPages}`}
+          </p>
+        )}
+
         {isLoading ? (
           <p className="text-center py-20 text-white/50">Carregando coleção…</p>
+        ) : totalGroups === 0 ? (
+          <p className="text-center py-20 text-white/50">
+            {query || cor
+              ? "Nenhum modelo encontrado com esses filtros."
+              : (
+                <>
+                  Nenhum produto ainda. <Link to="/catalogo" className="underline">Ver catálogo</Link>
+                </>
+              )}
+          </p>
         ) : (
           <>
-            {showMoletons && <Section title="Moletons" subtitle="Peso 380gsm · Edição 01" products={moletons} cor={cor} />}
-            {showTenis && <Section title="Tênis" subtitle="Solado premium · Numerado" products={tenis} cor={cor} />}
-            {showOutros && <Section title="Outros" subtitle="Complementos" products={outros} cor={cor} />}
-            {all.length === 0 && (
-              <p className="text-center py-20 text-white/50">
-                Nenhum produto ainda. <Link to="/catalogo" className="underline">Ver catálogo</Link>
-              </p>
+            {showMoletons && (
+              <Section
+                title="Moletons"
+                subtitle="Peso 380gsm · Edição 01"
+                groups={takePage(buckets.moletons)}
+                preferred={cor}
+              />
+            )}
+            {showTenis && (
+              <Section
+                title="Tênis"
+                subtitle="Solado premium · Numerado"
+                groups={takePage(buckets.tenis)}
+                preferred={cor}
+              />
+            )}
+            {showOutros && (
+              <Section
+                title="Outros"
+                subtitle="Complementos"
+                groups={takePage(buckets.outros)}
+                preferred={cor}
+              />
+            )}
+
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setPage((n) => Math.max(1, n - 1))}
+                  disabled={currentPage <= 1}
+                  className="rounded-full border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 disabled:opacity-40"
+                >
+                  Anterior
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setPage(n)}
+                    className={`h-9 min-w-9 rounded-full px-3 text-xs font-bold uppercase tracking-wider transition ${
+                      n === currentPage
+                        ? "bg-white text-black"
+                        : "border border-white/20 text-white/70 hover:bg-white/10"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage((n) => Math.min(totalPages, n + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="rounded-full border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 disabled:opacity-40"
+                >
+                  Próxima
+                </button>
+              </div>
             )}
           </>
         )}
